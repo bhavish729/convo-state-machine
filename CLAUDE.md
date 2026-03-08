@@ -8,13 +8,15 @@ Tara is a voice-first NPA debt collections agent built on LangGraph. It uses a *
 
 ```
 START → load_context → central_intelligence ──(conditional)──→ action_node → END
-                                                                     ↑
-                            Next user message re-enters via          │
-                            MemorySaver checkpoint ─────────────────┘
+                                              │                      ↑
+                                              ↓               Next user message
+                                           end_call → END     re-enters via
+                                                               MemorySaver
 ```
 
 - `central_intelligence` is the ONLY node that calls the LLM
-- Action nodes (`identify_borrower`, `state_purpose`, `handle_objection`, `present_options`, `validate_commitment`, `escalate`) are **deterministic state-update functions** — they read `routing_decision.extracted_info` and update state fields
+- Action nodes (`identify_borrower`, `state_purpose`, `handle_objection`, `present_options`, `validate_commitment`, `escalate`, `end_call`) are **deterministic state-update functions** — they read `routing_decision.extracted_info` and update state fields
+- Terminal routes (`end_agreement/end_refusal/end_callback`) go through `end_call` node to record call outcomes before ending
 - The graph compiles with `MemorySaver` checkpointing — each WebSocket turn re-enters the graph at `load_context` with accumulated state
 
 ## Tech Stack
@@ -43,9 +45,8 @@ src/tara/
 ├── state/                 # TaraState TypedDict + enums
 ├── graph/                 # StateGraph assembly + routing function
 ├── nodes/                 # Deterministic action nodes (no LLM calls)
-├── tools/                 # Tool functions (currently bound but unused)
 ├── voice/                 # ElevenLabs STT + TTS with Hindi preprocessing
-├── data/                  # Mock borrower profiles + payment options
+├── data/                  # Borrower profiles (JSON) + payment option generator
 └── web/                   # FastAPI app + WebSocket handler + UI
 ```
 
@@ -53,9 +54,11 @@ src/tara/
 
 - **Language**: All prompts and Tara responses are in Hinglish (Devanagari script with English technical terms in Roman)
 - **State updates**: Nodes return dicts that LangGraph merges into `TaraState`. Fields with `operator.add` reducers (`sentiment_history`, `objections_raised`) accumulate; others overwrite.
+- **Custom reducers**: `tactical_memory` uses `_merge_tactical_memory` (appends lists, overwrites scalars). `call_progress` uses `_merge_call_progress` (all scalars, overwrite).
 - **Routing**: `central_intelligence` sets `routing_decision` (JSON with `next_node`, `reasoning`, `response_to_borrower`, `extracted_info`). The `route_from_ci()` function reads `next_node` and returns the edge target.
+- **Terminal routing**: `end_agreement/end_refusal/end_callback` route through `end_call` node (not directly to END) to record call outcomes.
 - **TTS preprocessing**: `voice/tts.py` has `_preprocess_for_tts()` that converts acronyms to Devanagari phonetics and currency amounts to Hindi number words before sending to ElevenLabs.
-- **No tests yet**: `tests/` exists but is empty.
+- **No tests yet**: `tests/` exists but is empty. Use `uv run python -c "from tara.graph.builder import build_graph; build_graph(); print('OK')"` to verify imports and graph compilation.
 
 ## Environment Variables
 
@@ -70,4 +73,4 @@ All config uses `TARA_` prefix (see `.env.example`):
 - **Add a new action node**: Create in `nodes/`, register in `graph/builder.py` (add to `ACTION_NODES` set + `add_node` + path map)
 - **Modify collections strategy**: Edit `llm/prompts.py` — the system prompt drives all behavior
 - **Add TTS pronunciation fix**: Add to `_TTS_REPLACEMENTS` dict or `_convert_currency_to_hindi()` in `voice/tts.py`
-- **Add a mock borrower**: Add to `BORROWER_DB` in `data/mock_borrowers.py`
+- **Add a mock borrower**: Add to `data/borrowers.json` (loaded by `mock_borrowers.py`)

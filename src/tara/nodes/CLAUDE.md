@@ -15,13 +15,14 @@ This is the most important architectural pattern in Tara:
 | Node | What it does | Key state updates |
 |------|-------------|-------------------|
 | `load_context` | First node. Initializes state with borrower profile + defaults. Skips on subsequent turns (guard: `if state.get("conversation_phase") is not None: return {}`) | `borrower_profile`, `conversation_phase=INIT`, all defaults |
-| `central_intelligence` | Calls LLM with full state context. Parses JSON routing decision. | `messages` (AI response), `routing_decision`, `turn_count` |
-| `identify_borrower` | Checks `extracted_info.identity_confirmed`. Legacy fallback checks SSN/DOB/name. | `identity_verified`, `verification_attempts`, `conversation_phase` |
-| `state_purpose` | Currently a stub — just sets phase. | `conversation_phase=PURPOSE_STATEMENT` |
-| `handle_objection` | Reads `extracted_info.objection_type`, logs it. | `conversation_phase`, `current_objection`, `objections_raised` (appended) |
-| `present_options` | Calls `generate_payment_options()` to create payment plans. | `conversation_phase`, `negotiation.offers_presented` |
-| `validate_commitment` | Matches `extracted_info.chosen_option_id` against offers. If found, sets terminal. | `negotiation.agreed_option`, `is_terminal`, `conversation_phase` |
+| `central_intelligence` | Calls LLM, parses JSON routing, extracts sentiment + tactical memory + call progress. Retries once on JSON parse failure. | `messages`, `routing_decision`, `turn_count`, `current_sentiment`, `tactical_memory`, `call_progress` |
+| `identify_borrower` | Two paths: (1) first-time verification via extracted_info, (2) mid-call identity reversal — revokes verification, records challenge in call_progress. | `identity_verified`, `verification_attempts`, `conversation_phase`, `call_progress` |
+| `state_purpose` | Sets phase + records consequence used in tactical memory. | `conversation_phase`, `tactical_memory` |
+| `handle_objection` | Reads objection_type, tracks excuses in tactical memory, detects objection loops (consecutive same-type counter). | `conversation_phase`, `current_objection`, `objections_raised`, `tactical_memory`, `call_progress` |
+| `present_options` | Calls `generate_payment_options()` to create payment plans. Tracks tactic used. | `conversation_phase`, `negotiation.offers_presented`, `tactical_memory` |
+| `validate_commitment` | Two paths: (1) pre-built option match, (2) partial amount lock (sets payment_locked, calculates remaining, marks terminal). | `negotiation.agreed_option`, `is_terminal`, `conversation_phase`, `call_progress` |
 | `escalate` | Marks conversation terminal with escalation reason. | `conversation_phase=ESCALATION`, `escalation_reason`, `is_terminal=True` |
+| `end_call` | Terminal handler — maps next_node (end_agreement/end_refusal/end_callback) to phase + outcome. | `conversation_phase`, `is_terminal=True`, `call_progress.call_outcome` |
 
 ## Important: Gemini Workaround in central_intelligence
 

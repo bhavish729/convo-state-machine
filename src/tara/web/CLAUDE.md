@@ -45,7 +45,7 @@ Real-time voice communication. Full lifecycle:
 - MP3 audio chunks (TTS output)
 
 ### `_serialize_state(result)`
-Extracts serializable state for the UI debug panel. Strips messages (too large) and computes aggression level for display.
+Extracts serializable state for the UI debug panel. Includes call_progress, tactical_memory, aggression level. Strips messages (too large).
 
 ## session.py — In-Memory Session Manager
 
@@ -55,7 +55,7 @@ Extracts serializable state for the UI debug panel. Strips messages (too large) 
 - `tts` — persistent `ElevenLabsTTS` WebSocket connection
 - `opening_message` — cached for streaming on WS connect
 
-**Known issue**: No TTL cleanup — sessions live forever in memory.
+Sessions have a 1-hour TTL. `_cleanup_stale()` runs on each `create_session()` call.
 
 ## static/index.html — Voice Chat UI
 

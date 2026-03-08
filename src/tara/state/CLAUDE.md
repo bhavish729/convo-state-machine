@@ -11,8 +11,10 @@ These fields use LangGraph reducers — returning them from a node **appends** r
 | Field | Reducer | Purpose |
 |-------|---------|---------|
 | `messages` | `add_messages` | Conversation history (LangGraph's message dedup reducer) |
-| `sentiment_history` | `operator.add` | List of sentiment strings per turn (**currently never written to**) |
+| `sentiment_history` | `operator.add` | List of sentiment strings per turn (written by central_intelligence) |
 | `objections_raised` | `operator.add` | List of objection types raised by borrower |
+| `tactical_memory` | `_merge_tactical_memory` | Appends list fields (consequences_used, tactics_used, borrower_excuses), overwrites scalars |
+| `call_progress` | `_merge_call_progress` | All scalars — simple dict.update overwrite |
 
 ### Overwrite Fields (last write wins)
 
@@ -22,7 +24,7 @@ All other fields overwrite on each update:
 - `turn_count` — incremented by `central_intelligence`
 - `identity_verified` — set by `identify_borrower`
 - `routing_decision` — overwritten every turn by `central_intelligence`
-- `current_sentiment` — SentimentLevel enum (**initialized to NEUTRAL, never updated — known bug**)
+- `current_sentiment` — SentimentLevel enum (extracted every turn from `extracted_info.detected_sentiment`)
 - `is_terminal` — set to True by `escalate` or `validate_commitment` (agreement)
 
 ### Enums
@@ -37,6 +39,8 @@ All other fields overwrite on each update:
 - `PaymentOption` — payment plan (type, total_amount, monthly_payment, num_installments)
 - `NegotiationState` — offers_presented, agreed_option, counter_offers, rejection_reasons
 - `RoutingDecision` — next_node, reasoning, response_to_borrower, extracted_info
+- `TacticalMemory` — consequences_used, tactics_used, borrower_occupation, borrower_excuses, callback_attempts, promises_broken
+- `CallProgress` — partial_amount_committed, payment_locked, remaining_amount, identity_challenged, objection_loop_count, call_outcome (tracks events within a single call)
 
 ## Important Convention: How Nodes Return State Updates
 
