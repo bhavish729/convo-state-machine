@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tara": "./src/tara/graph/builder.py:build_graph"
+  },
+  "env": ".env"
+}
