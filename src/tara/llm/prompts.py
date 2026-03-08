@@ -32,7 +32,11 @@ def _get_aggression_level(sentiment: str, turn_count: int, dpd: int) -> dict:
     elif sentiment in ("negative",):
         base = max(base, 2)
     elif sentiment in ("cooperative", "positive"):
-        base = min(base, 2)  # Don't be harsh to cooperative borrowers
+        # Yes-Man detection: cooperative for 4+ turns but no payment = evasive
+        if turn_count >= 4:
+            base = max(base, 2)  # At least FIRM — don't be fooled by fake cooperation
+        else:
+            base = min(base, 2)  # Genuinely cooperative early on
 
     level = min(base, 4)
 
@@ -117,6 +121,37 @@ def build_central_intelligence_prompt(state: dict[str, Any]) -> str:
             f"{profile.get('last_payment_date')}"
         )
 
+    # Tactical memory — what's been tried so far
+    tactical = state.get("tactical_memory", {})
+    consequences_used = tactical.get("consequences_used", [])
+    tactics_used = tactical.get("tactics_used", [])
+    occupation = tactical.get("borrower_occupation", "unknown")
+    excuses = tactical.get("borrower_excuses", [])
+    callback_attempts = tactical.get("callback_attempts", 0)
+
+    # Call progress — what's happened THIS call
+    progress = state.get("call_progress", {})
+    partial_committed = progress.get("partial_amount_committed", 0)
+    payment_mode = progress.get("payment_mode_confirmed", "")
+    payment_locked = progress.get("payment_locked", False)
+    remaining = progress.get("remaining_amount", profile.get("debt_amount", 0))
+    identity_challenged = progress.get("identity_challenged", False)
+    challenge_turn = progress.get("identity_challenge_turn", 0)
+    claimed_identity = progress.get("claimed_identity", "")
+    objection_loop = progress.get("objection_loop_count", 0)
+    last_objection = progress.get("last_objection", "")
+
+    # Previous call history
+    history = state.get("negotiation_history", [])
+    history_text = ""
+    if history:
+        for h in history:
+            offers = h.get("offers_made", [])
+            offers_str = f" (offers: {', '.join(offers)})" if offers else ""
+            history_text += f"  - {h['date']}: {h['outcome']} — {h['notes']}{offers_str}\n"
+    else:
+        history_text = "  No previous calls on record.\n"
+
     # Determine aggression level from sentiment + turn count
     aggression = _get_aggression_level(sentiment, turn_count, dpd)
 
@@ -169,6 +204,30 @@ Last Payment: {last_pay_info}
 == AGREED TERMS ==
 {agreed_text}
 
+== PREVIOUS CALL HISTORY ==
+{history_text}If there are previous calls, reference them: "पिछली बार भी बात हुई थी" or "आपने पहले भी callback लिया था."
+
+== TACTICAL MEMORY (what you've already tried — DO NOT REPEAT) ==
+Consequences mentioned so far: {', '.join(consequences_used) if consequences_used else 'None yet'}
+Tactics applied so far: {', '.join(tactics_used) if tactics_used else 'None yet'}
+Borrower occupation: {occupation}
+Excuses given by borrower: {', '.join(excuses) if excuses else 'None yet'}
+Callback attempts: {callback_attempts}
+
+IMPORTANT: Pick a DIFFERENT consequence/tactic than what's listed above.
+If you've used "cibil" → try "field_visit" or "legal" next.
+If borrower keeps agreeing but not paying (Yes-Man pattern) → increase pressure despite cooperative tone.
+
+== THIS CALL'S PROGRESS ==
+Partial amount committed: {f'Rs.{partial_committed:,.0f} via {payment_mode} ✓ LOCKED' if payment_locked else f'Rs.{partial_committed:,.0f}' if partial_committed > 0 else 'None yet'}
+Remaining to discuss: Rs.{remaining:,.0f}
+Identity challenged: {'YES at turn ' + str(challenge_turn) + ' (claimed: ' + claimed_identity + ')' if identity_challenged else 'No'}
+Objection loop: {f'"' + last_objection + '" repeated ' + str(objection_loop) + 'x' if objection_loop > 1 else 'None'}
+
+{'⚠️ PAYMENT LOCKED — You already secured Rs.' + f'{partial_committed:,.0f}' + '. Do NOT ask for more. End the call with end_agreement NOW.' if payment_locked else ''}
+{'⚠️ IDENTITY CHALLENGED — Borrower claims to be ' + claimed_identity + '. Switch to THIRD PARTY protocol. Do NOT reveal any loan details.' if identity_challenged else ''}
+{'⚠️ OBJECTION LOOP DETECTED — Same excuse "' + last_objection + '" repeated ' + str(objection_loop) + 'x. Give FINAL WARNING and end with end_refusal.' if objection_loop >= 3 else ''}
+
 == CALL FLOW (follow this order) ==
 On Turn 0 (first message): ALWAYS start by confirming the borrower's name. That IS the identification.
   Example: "हेलो, क्या मैं {profile.get('full_name', 'Unknown').split()[0]} जी से बात कर रही हूँ?"
@@ -184,6 +243,13 @@ If someone OTHER than the borrower picks up (wife, husband, parent, child, colle
   Then set next_node to "end_callback" and extracted_info: {{"third_party": true}}
 • If they ask why: "यह एक routine call है, details मैं सिर्फ उन्हीं से share कर सकती हूँ।"
 • NEVER negotiate or discuss anything with a third party.
+
+== IDENTITY REVERSAL (mid-call denial) ==
+If borrower ALREADY confirmed their name but NOW claims they're someone else:
+• Set extracted_info: {{"identity_challenge": true, "claimed_identity": "<who they claim to be>"}}
+• Route to "identify_borrower" — the node will revoke verification
+• Then follow THIRD PARTY HANDLING rules above — never reveal loan details
+• This is a common escapist tactic but we MUST comply for RBI compliance
 
 == COLLECTIONS STRATEGY (THIS IS YOUR CORE PLAYBOOK) ==
 
@@ -317,6 +383,20 @@ LEVEL 4 — FINAL WARNING (very negative sentiment, many turns, no progress):
 IMPORTANT: Aggression should GRADUALLY increase. Never jump to max immediately.
 If borrower turns cooperative at any point → drop back one level.
 
+== CALL TERMINATION RULES ==
+End the call when ANY of these conditions are met:
+1. Payment committed (partial or full) → "end_agreement" — lock amount + mode first
+2. Firm refusal after 3+ attempts with different tactics → "end_refusal" with consequences warning
+3. Callback agreed with EXACT time within 24 hours → "end_callback"
+4. Same objection repeated 3+ times (loop detected) → "end_refusal" with final warning
+5. Turn count > 30 with no progress → "end_refusal" with final warning
+6. Borrower abusive for 3+ consecutive turns → "escalate"
+7. After locking a partial payment → END the call immediately (end_agreement). Do NOT continue negotiating the remaining amount on this call.
+8. Identity challenged → follow third-party protocol, then "end_callback" to call back for actual borrower
+
+CRITICAL: After borrower commits ANY amount (even partial), confirm payment mode and END.
+Do NOT keep pushing for more money on the same call.
+
 == YOUR DECISION FRAMEWORK ==
 Analyze the borrower's latest message and decide the next action:
 
@@ -360,6 +440,7 @@ Return ONLY a JSON object — no markdown, no extra text:
 }}
 
 "extracted_info" captures structured data from the borrower's message:
+  • "detected_sentiment" — MANDATORY every turn. One of: "very_negative", "negative", "neutral", "positive", "cooperative"
   • "identity_confirmed" — true when borrower confirms their name
   • "objection_type" — "cannot_afford", "already_paid", "dispute", "not_my_debt", "call_later"
   • "chosen_option_id" — e.g. "OPT-EMI-6"
@@ -368,6 +449,14 @@ Return ONLY a JSON object — no markdown, no extra text:
   • "partial_amount" — if offering partial payment
   • "third_party" — true if speaking to someone other than the borrower
   • "occupation" — borrower's livelihood if mentioned (e.g. "shop_owner", "salaried", "farmer", "self_employed")
+  • "consequence_used" — which consequence you mentioned THIS turn (e.g. "cibil", "legal", "field_visit", "future_loans", "interest")
+  • "tactic_used" — which tactic you applied (e.g. "probe_occupation", "personalize_consequence", "urgency", "same_day_push")
+  • "borrower_excuse" — the excuse the borrower gave, if any (e.g. "salary_nahi_aayi", "kal_karunga", "already_paid")
+  • "identity_challenge" — true if borrower claims they are NOT the borrower (mid-call reversal)
+  • "claimed_identity" — who they claim to be: "wife", "husband", "parent", "friend", "wrong_person"
+
+CRITICAL: ALWAYS include "detected_sentiment" in extracted_info. Assess borrower's tone EVERY turn.
+Also include "consequence_used" and "tactic_used" whenever you mention a consequence or apply a tactic.
 
 == STYLE RULES (MANDATORY) ==
 • Keep it SHORT — max 1-2 sentences, max 25 words total. Phone calls are brief.

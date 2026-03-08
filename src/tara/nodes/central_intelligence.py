@@ -7,18 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from tara.llm.prompts import build_central_intelligence_prompt
 from tara.llm.provider import get_llm
-from tara.state.schema import RoutingDecision
-from tara.tools.analysis import assess_sentiment, detect_objection_type
-from tara.tools.borrower import get_borrower_profile, get_negotiation_history
-from tara.tools.payment import calculate_payment_options
-
-ALL_TOOLS = [
-    get_borrower_profile,
-    get_negotiation_history,
-    calculate_payment_options,
-    detect_objection_type,
-    assess_sentiment,
-]
+from tara.state.schema import RoutingDecision, SentimentLevel
 
 
 def central_intelligence(state: dict) -> dict:
@@ -29,7 +18,7 @@ def central_intelligence(state: dict) -> dict:
     Sets routing_decision for the conditional edge to inspect.
     """
     system_prompt = build_central_intelligence_prompt(state)
-    llm = get_llm(tools=ALL_TOOLS)
+    llm = get_llm()  # No tools — prompt handles routing directly
 
     conversation = list(state.get("messages", []))
 
@@ -53,11 +42,86 @@ def central_intelligence(state: dict) -> dict:
     response = llm.invoke(llm_messages)
     routing = _parse_routing_decision(response)
 
-    return {
+    # Retry once if JSON parse failed (avoids unnecessary escalation)
+    if (
+        routing["next_node"] == "escalate"
+        and "Failed to parse" in routing["reasoning"]
+    ):
+        retry_msg = HumanMessage(
+            content="Your previous response was not valid JSON. "
+            "Return ONLY the JSON object with keys: next_node, reasoning, "
+            "response_to_borrower, extracted_info. No markdown, no extra text."
+        )
+        response = llm.invoke(llm_messages + [response, retry_msg])
+        routing = _parse_routing_decision(response)
+
+    # --- Sentiment tracking (was NEVER updated before — always stuck on "neutral") ---
+    _SENTIMENT_MAP = {
+        "very_negative": SentimentLevel.VERY_NEGATIVE,
+        "negative": SentimentLevel.NEGATIVE,
+        "neutral": SentimentLevel.NEUTRAL,
+        "positive": SentimentLevel.POSITIVE,
+        "cooperative": SentimentLevel.COOPERATIVE,
+    }
+    sentiment_raw = routing.get("extracted_info", {}).get("detected_sentiment", "")
+    detected = _SENTIMENT_MAP.get(sentiment_raw)
+
+    result: dict = {
         "messages": extra_messages + [AIMessage(content=routing["response_to_borrower"])],
         "routing_decision": routing,
         "turn_count": state.get("turn_count", 0) + 1,
     }
+
+    if detected:
+        result["current_sentiment"] = detected
+        result["sentiment_history"] = [sentiment_raw]  # appended via operator.add
+
+    # --- Tactical memory: extract consequence/tactic/occupation used this turn ---
+    extracted = routing.get("extracted_info", {})
+    tactical_update: dict = {}
+
+    consequence = extracted.get("consequence_used")
+    if consequence:
+        tactical_update["consequences_used"] = [consequence]
+
+    tactic = extracted.get("tactic_used")
+    if tactic:
+        tactical_update["tactics_used"] = [tactic]
+
+    occupation = extracted.get("occupation")
+    if occupation:
+        tactical_update["borrower_occupation"] = occupation
+
+    if tactical_update:
+        result["tactical_memory"] = tactical_update
+
+    # --- Call progress: track partial payment + identity challenge ---
+    progress_update: dict = {}
+
+    partial_amount = extracted.get("partial_amount")
+    if partial_amount:
+        try:
+            amount = float(partial_amount)
+            debt = state.get("borrower_profile", {}).get("debt_amount", 0)
+            progress_update["partial_amount_committed"] = amount
+            progress_update["remaining_amount"] = max(0, debt - amount)
+        except (ValueError, TypeError):
+            pass
+
+    payment_mode = extracted.get("payment_mode")
+    if payment_mode:
+        progress_update["payment_mode_confirmed"] = payment_mode
+
+    identity_challenge = extracted.get("identity_challenge")
+    if identity_challenge:
+        progress_update["identity_challenged"] = True
+        progress_update["identity_challenge_turn"] = state.get("turn_count", 0)
+        progress_update["claimed_identity"] = extracted.get("claimed_identity", "unknown")
+
+    if progress_update:
+        result["call_progress"] = progress_update
+
+    return result
 
 
 def _extract_text_content(response: AIMessage) -> str:

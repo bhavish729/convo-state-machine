@@ -153,6 +153,19 @@
             opacity: 0.7;
         }
         .error-toast .error-msg { color: #cc8888; }
+        .info-toast {
+            background: #101a1a;
+            border: 1px solid #203a3a;
+            border-left: 3px solid #f39c12;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #f39c12;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            line-height: 1.4;
+            animation: slideIn 0.3s ease, fadeOut 0.5s ease 5s forwards;
+            word-break: break-word;
+        }
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(20px); }
             to { opacity: 1; transform: translateX(0); }
@@ -800,6 +813,10 @@ function handleWsMessage(event) {
             if (data.status === 'speaking') { isTaraSpeaking = true; setStatus('speaking', 'Tara is speaking...'); }
             else if (data.status === 'thinking') setStatus('thinking', 'Processing...');
             else if (data.status === 'listening') setStatus('listening', 'Listening...');
+            else if (data.status === 'no_speech') {
+                setStatus('idle', 'Ready');
+                showToast(data.message || 'Kuch sunai nahi diya, please phir se boliye');
+            }
             break;
 
         case 'audio_end':
@@ -1183,6 +1200,17 @@ function showError(message) {
     // Auto-remove after 9 seconds (8s visible + 1s fade buffer)
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 9000);
     // Cap visible toasts at 5
+    while (container.children.length > 5) container.firstChild.remove();
+}
+
+// ── Info Toast (for non-error feedback like no_speech) ──
+function showToast(message) {
+    const container = document.getElementById('error-container');
+    const toast = document.createElement('div');
+    toast.className = 'info-toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
     while (container.children.length > 5) container.firstChild.remove();
 }
 </script>

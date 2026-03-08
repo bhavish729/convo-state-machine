@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -65,6 +66,8 @@ def _serialize_state(result: dict) -> dict:
             "concessions_made": negotiation.get("concessions_made", 0),
             "agreed_option": negotiation.get("agreed_option"),
         },
+        "tactical_memory": result.get("tactical_memory", {}),
+        "call_progress": result.get("call_progress", {}),
         "message_count": len(result.get("messages", [])),
     }
 
@@ -107,7 +110,10 @@ async def create_session(borrower_id: str = "BRW-001"):
         "messages": [],
         "borrower_profile": {"borrower_id": borrower_id},
     }
-    result = await session.graph.ainvoke(initial_state, config=config)
+    result = await asyncio.wait_for(
+        session.graph.ainvoke(initial_state, config=config),
+        timeout=30.0,
+    )
 
     # Extract Tara's opening message
     ai_messages = [m for m in result.get("messages", []) if m.type == "ai"]
@@ -218,6 +224,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     stt_ms = int((time.monotonic() - t_stt_start) * 1000)
 
                     if not user_text.strip():
+                        await websocket.send_json({
+                            "type": "status",
+                            "status": "no_speech",
+                            "message": "Kuch sunai nahi diya, please phir se boliye",
+                        })
                         await websocket.send_json({"type": "audio_end"})
                         continue
 
@@ -274,10 +285,21 @@ async def _process_user_input(
     await websocket.send_json({"type": "status", "status": "thinking"})
 
     t_llm_start = time.monotonic()
-    result = await session.graph.ainvoke(
-        {"messages": [HumanMessage(content=user_text)]},
-        config=config,
-    )
+    try:
+        result = await asyncio.wait_for(
+            session.graph.ainvoke(
+                {"messages": [HumanMessage(content=user_text)]},
+                config=config,
+            ),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        await websocket.send_json({
+            "type": "error",
+            "error": "Response took too long. Please try again.",
+        })
+        await websocket.send_json({"type": "audio_end"})
+        return
     llm_ms = int((time.monotonic() - t_llm_start) * 1000)
 
     # Extract the latest AI response

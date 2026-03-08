@@ -6,6 +6,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from tara.nodes.central_intelligence import central_intelligence
+from tara.nodes.end_call import end_call
 from tara.nodes.escalate import escalate
 from tara.nodes.handle_objection import handle_objection
 from tara.nodes.identify_borrower import identify_borrower
@@ -35,7 +36,7 @@ def route_from_ci(
     "present_options",
     "validate_commitment",
     "escalate",
-    "__end__",
+    "end_call",
 ]:
     """
     Routing function for conditional edges from central_intelligence.
@@ -44,12 +45,12 @@ def route_from_ci(
     decision = state.get("routing_decision", {})
     next_node = decision.get("next_node", "escalate")
 
-    # Terminal conditions
+    # Terminal conditions — route through end_call node for state tracking
     if next_node in ("end_agreement", "end_refusal", "end_callback"):
-        return END
+        return "end_call"
 
     # Guard: force escalation if too many turns
-    if state.get("turn_count", 0) > 50:
+    if state.get("turn_count", 0) > 30:
         return "escalate"
 
     if next_node in ACTION_NODES:
@@ -79,6 +80,7 @@ def build_graph() -> StateGraph:
     builder.add_node("present_options", present_options)
     builder.add_node("validate_commitment", validate_commitment)
     builder.add_node("escalate", escalate)
+    builder.add_node("end_call", end_call)
 
     # Entry edge
     builder.add_edge(START, "load_context")
@@ -95,7 +97,7 @@ def build_graph() -> StateGraph:
             "present_options": "present_options",
             "validate_commitment": "validate_commitment",
             "escalate": "escalate",
-            END: END,
+            "end_call": "end_call",
         },
     )
 
@@ -110,6 +112,7 @@ def build_graph() -> StateGraph:
         "present_options",
         "validate_commitment",
         "escalate",
+        "end_call",
     ]:
         builder.add_edge(action_node, END)
 
