@@ -1025,6 +1025,30 @@ function renderState(state) {
         ${stateRow('agreed', neg.agreed_option ? 'YES' : 'no', neg.agreed_option ? 'success' : 'muted')}
     </div>`;
 
+    // ── Call Progress ──
+    const cp = state.call_progress || {};
+    const partialAmt = cp.partial_amount_committed || 0;
+    const remainingAmt = cp.remaining_amount || 0;
+    const locked = cp.payment_locked || false;
+    const idChallenged = cp.identity_challenged || false;
+    const loopCount = cp.objection_loop_count || 0;
+    const lastObj = cp.last_objection || '';
+    const callOutcome = cp.call_outcome || '';
+    const hasProgress = partialAmt > 0 || idChallenged || loopCount > 1 || callOutcome;
+    if (hasProgress || locked) {
+        html += `<div class="state-section">
+            <div class="state-section-title">Call Progress</div>
+            ${partialAmt > 0 ? stateRow('offer', '₹' + Number(partialAmt).toLocaleString('en-IN'), locked ? 'success' : 'warning') : ''}
+            ${locked ? stateRow('locked', '✓ LOCKED', 'success') : ''}
+            ${remainingAmt > 0 ? stateRow('remaining', '₹' + Number(remainingAmt).toLocaleString('en-IN'), 'muted') : ''}
+            ${cp.payment_mode_confirmed ? stateRow('mode', cp.payment_mode_confirmed) : ''}
+            ${idChallenged ? stateRow('identity', 'CHALLENGED (turn ' + (cp.identity_challenge_turn || '?') + ')', 'danger') : ''}
+            ${cp.claimed_identity ? stateRow('claims', cp.claimed_identity, 'warning') : ''}
+            ${loopCount > 1 ? stateRow('loop', lastObj + ' ×' + loopCount, 'warning') : ''}
+            ${callOutcome ? stateRow('outcome', callOutcome, callOutcome === 'payment_committed' ? 'success' : 'danger') : ''}
+        </div>`;
+    }
+
     // ── Borrower Profile ──
     const bp = state.borrower_profile || {};
     const dpd = bp.days_past_due || 0;
