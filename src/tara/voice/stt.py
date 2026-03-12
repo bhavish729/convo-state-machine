@@ -138,8 +138,12 @@ class RealtimeTranscriber:
     async def flush(self):
         await self.commit()
 
-    async def wait_for_final(self, timeout: float = 3) -> str:
-        """Wait briefly for committed transcript, fall back to partial."""
+    async def wait_for_final(self, timeout: float = 1.5) -> str:
+        """Wait briefly for committed transcript, fall back to partial.
+
+        Timeout reduced from 3s to 1.5s — with eager partial transcript
+        usage in routes.py, this is now a safety-net fallback only.
+        """
         try:
             await asyncio.wait_for(self._committed_event.wait(), timeout)
         except asyncio.TimeoutError:

@@ -19,4 +19,5 @@ def present_options(state: dict) -> dict:
     return {
         "conversation_phase": ConversationPhase.NEGOTIATION,
         "negotiation": negotiation,
+        "tactical_memory": {"tactics_used": ["present_options"]},
     }

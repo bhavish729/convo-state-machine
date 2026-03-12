@@ -18,6 +18,7 @@ class ConversationPhase(str, Enum):
     NEGOTIATION = "negotiation"
     OBJECTION_HANDLING = "objection_handling"
     COMMITMENT = "commitment"
+    PAYMENT_CONFIRMATION = "payment_confirmation"
     ESCALATION = "escalation"
     COMPLETED_AGREEMENT = "completed_agreement"
     COMPLETED_REFUSAL = "completed_refusal"
@@ -89,6 +90,72 @@ class RoutingDecision(TypedDict):
     extracted_info: dict[str, Any]
 
 
+class TacticalMemory(TypedDict, total=False):
+    """Tracks which consequences/tactics have been used across turns.
+    Prevents Tara from repeating the same arguments."""
+    consequences_used: list[str]   # ["cibil", "legal", "field_visit", ...]
+    tactics_used: list[str]        # ["probe_occupation", "personalize_consequence", ...]
+    borrower_occupation: str       # "shop_owner", "salaried", "farmer", etc.
+    borrower_excuses: list[str]    # ["salary_nahi_aayi", "kal_karunga", ...]
+    partial_amount_offered: float  # Last partial amount borrower mentioned
+    callback_attempts: int         # How many times they asked for callback
+    promises_broken: int           # How many times they promised but didn't pay
+
+
+def _merge_tactical_memory(
+    existing: TacticalMemory | None,
+    update: TacticalMemory | None,
+) -> TacticalMemory:
+    """Custom reducer for TacticalMemory.
+
+    LangGraph reducers only work at the top level of state, not on nested
+    TypedDict fields.  This function knows which fields are lists (append)
+    vs scalars (overwrite), so nodes can return partial dicts and they
+    accumulate correctly across turns.
+    """
+    _LIST_FIELDS = frozenset({"consequences_used", "tactics_used", "borrower_excuses"})
+
+    merged: dict = dict(existing) if existing else {}
+    for key, value in (update or {}).items():
+        if key in _LIST_FIELDS:
+            merged[key] = merged.get(key, []) + value  # append lists
+        else:
+            merged[key] = value  # overwrite scalars
+    return merged  # type: ignore[return-value]
+
+
+class CallProgress(TypedDict, total=False):
+    """Tracks what has happened during THIS call.
+    Gives the LLM awareness of partial payments, identity challenges, and loops."""
+    # Payment tracking
+    partial_amount_committed: float    # Amount borrower committed to pay
+    payment_mode_confirmed: str        # "upi", "neft", "nach", "cash"
+    payment_committed: bool            # True when borrower agrees to an amount (pending confirmation)
+    payment_locked: bool               # True once borrower explicitly confirmed amount + mode
+    remaining_amount: float            # debt_amount - partial_amount_committed
+
+    # Identity tracking
+    identity_challenged: bool          # True if borrower reverses identity mid-call
+    identity_challenge_turn: int       # Which turn they challenged
+    claimed_identity: str              # "wife", "husband", "wrong_person", etc.
+
+    # Termination intelligence
+    objection_loop_count: int          # How many times same objection repeated consecutively
+    last_objection: str                # Last objection type for loop detection
+    unproductive_turns: int            # Consecutive turns with no forward progress
+    call_outcome: str                  # "payment_committed", "firm_refusal", "callback_scheduled"
+
+
+def _merge_call_progress(
+    existing: CallProgress | None,
+    update: CallProgress | None,
+) -> CallProgress:
+    """Custom reducer for CallProgress. All fields are scalars — just overwrite."""
+    merged: dict = dict(existing) if existing else {}
+    merged.update(update or {})
+    return merged  # type: ignore[return-value]
+
+
 # ── Root Graph State ──
 
 
@@ -119,6 +186,15 @@ class TaraState(TypedDict, total=False):
     current_objection: ObjectionType
     objections_raised: Annotated[list[str], operator.add]
 
+    # Tactical memory — tracks consequences/tactics used across turns
+    tactical_memory: Annotated[TacticalMemory, _merge_tactical_memory]
+
+    # Call progress — tracks events within THIS call
+    call_progress: Annotated[CallProgress, _merge_call_progress]
+
+    # Previous call history (loaded from JSON, injected into prompt)
+    negotiation_history: list[dict]
+
     # Routing — set by central_intelligence, read by conditional edge
     routing_decision: RoutingDecision
 
@@ -127,3 +203,6 @@ class TaraState(TypedDict, total=False):
 
     # Escalation
     escalation_reason: str
+
+    # Agent type — which delinquency-stage agent is running
+    agent_type: str  # "pre_due", "bucket_x", "npa"
