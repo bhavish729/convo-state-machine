@@ -1,14 +1,16 @@
 # Nodes — Deterministic State Update Functions
 
-## Pattern: Central Intelligence + Action Nodes
+## Pattern: Central Intelligence Factory + Action Nodes
 
 This is the most important architectural pattern in Tara:
 
-1. `central_intelligence.py` is the **ONLY** node that calls the LLM
-2. It returns `routing_decision` with `{next_node, reasoning, response_to_borrower, extracted_info}`
-3. The graph's conditional edge (`route_from_ci` in `graph/builder.py`) reads `next_node` and routes to the appropriate action node
+1. `central_intelligence.py` provides `make_central_intelligence(prompt_builder)` — a factory that creates CI nodes wired to agent-specific prompts
+2. The CI node is the **ONLY** node that calls the LLM. It returns `routing_decision` with `{next_node, reasoning, response_to_borrower, extracted_info}`
+3. Each agent's `route_from_ci()` function reads `next_node` and routes to the appropriate action node
 4. Action nodes are **pure state-update functions** — they read `routing_decision.extracted_info` and update state fields
 5. After the action node runs, the turn ends (edge to `END`). The next user message re-enters via checkpoint.
+
+The CI factory avoids duplicating complex logic (JSON parsing, retry, sentiment tracking, tactical memory) across the 3 agents. Each agent only needs to provide its own `build_*_prompt(state) → str` function.
 
 ## Node Responsibilities
 
@@ -30,10 +32,12 @@ Gemini requires the last message to be from a human. When the conversation is em
 
 ## Adding a New Action Node
 
+**Shared node** (used by multiple agents):
 1. Create `src/tara/nodes/my_node.py` with `def my_node(state: dict) -> dict:`
-2. Import and register in `graph/builder.py`:
-   - Add to `ACTION_NODES` set
-   - `builder.add_node("my_node", my_node)`
-   - Add to conditional edge path map
-   - Add `builder.add_edge("my_node", END)`
-3. Add the node name to the routing decision options in `llm/prompts.py`
+2. Import and register in each agent's `graph.py` that uses it
+
+**Agent-specific node** (used by one agent only):
+1. Add `def my_node(state: dict) -> dict:` in `agents/my_agent/nodes.py`
+2. Register in that agent's `graph.py`
+
+For both: add to `ACTION_NODES` set, `builder.add_node()`, conditional edge path map, `builder.add_edge(my_node, END)`, and the agent's prompt routing options.

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from tara.state.schema import ConversationPhase
+
+logger = logging.getLogger(__name__)
 
 
 def end_call(state: dict) -> dict:
@@ -11,6 +15,12 @@ def end_call(state: dict) -> dict:
     """
     routing = state.get("routing_decision", {})
     next_node = routing.get("next_node", "end_refusal")
+    turn = state.get("turn_count", 0)
+
+    logger.warning(
+        f"[END_CALL] TERMINAL at turn {turn}: next_node='{next_node}', "
+        f"reasoning='{routing.get('reasoning', '')[:100]}'"
+    )
 
     phase_map = {
         "end_agreement": ConversationPhase.COMPLETED_AGREEMENT,

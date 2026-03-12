@@ -18,6 +18,7 @@ class ConversationPhase(str, Enum):
     NEGOTIATION = "negotiation"
     OBJECTION_HANDLING = "objection_handling"
     COMMITMENT = "commitment"
+    PAYMENT_CONFIRMATION = "payment_confirmation"
     ESCALATION = "escalation"
     COMPLETED_AGREEMENT = "completed_agreement"
     COMPLETED_REFUSAL = "completed_refusal"
@@ -129,7 +130,8 @@ class CallProgress(TypedDict, total=False):
     # Payment tracking
     partial_amount_committed: float    # Amount borrower committed to pay
     payment_mode_confirmed: str        # "upi", "neft", "nach", "cash"
-    payment_locked: bool               # True once borrower confirmed payment details
+    payment_committed: bool            # True when borrower agrees to an amount (pending confirmation)
+    payment_locked: bool               # True once borrower explicitly confirmed amount + mode
     remaining_amount: float            # debt_amount - partial_amount_committed
 
     # Identity tracking
@@ -201,3 +203,6 @@ class TaraState(TypedDict, total=False):
 
     # Escalation
     escalation_reason: str
+
+    # Agent type — which delinquency-stage agent is running
+    agent_type: str  # "pre_due", "bucket_x", "npa"

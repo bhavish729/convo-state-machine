@@ -5,6 +5,12 @@ from langchain_core.tools import BaseTool
 
 from tara.config import LLMProvider, settings
 
+# ── LLM instance cache ──
+# LangChain chat models are stateless (no conversation memory) and reuse
+# HTTP connection pools internally.  Caching avoids re-importing the SDK
+# module and re-instantiating the client on every turn (~50-150 ms saved).
+_llm_cache: dict[tuple, BaseChatModel] = {}
+
 
 def get_llm(
     *,
@@ -18,10 +24,30 @@ def get_llm(
 
     Provider-agnostic — the rest of the codebase only sees BaseChatModel.
     If tools are provided, they are bound via .bind_tools().
+
+    Instances are cached by (provider, model, temperature, max_tokens) so
+    repeated calls with the same parameters return the same object.
+    Tool-bound models are never cached (bind_tools returns a new wrapper).
     """
     provider = provider or settings.llm_provider
     temperature = temperature if temperature is not None else settings.llm_temperature
     max_tokens = max_tokens or settings.llm_max_tokens
+
+    # Resolve the model name for the cache key
+    if provider == LLMProvider.OPENAI:
+        model_name = settings.openai_model
+    elif provider == LLMProvider.ANTHROPIC:
+        model_name = settings.anthropic_model
+    elif provider == LLMProvider.GEMINI:
+        model_name = settings.google_model
+    else:
+        model_name = str(provider)
+
+    cache_key = (provider, model_name, temperature, max_tokens)
+
+    # Return cached instance if available (never cache tool-bound models)
+    if not tools and cache_key in _llm_cache:
+        return _llm_cache[cache_key]
 
     if provider == LLMProvider.OPENAI:
         from langchain_openai import ChatOpenAI
@@ -52,6 +78,10 @@ def get_llm(
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")
+
+    # Cache the base model (without tools)
+    if not tools:
+        _llm_cache[cache_key] = llm
 
     if tools:
         llm = llm.bind_tools(tools)

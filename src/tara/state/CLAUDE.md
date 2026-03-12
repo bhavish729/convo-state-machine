@@ -19,6 +19,7 @@ These fields use LangGraph reducers — returning them from a node **appends** r
 ### Overwrite Fields (last write wins)
 
 All other fields overwrite on each update:
+- `agent_type` — str ("pre_due", "bucket_x", "npa") — set at session creation, determines which graph runs
 - `borrower_profile` — BorrowerProfile dict (set once by `load_context`)
 - `conversation_phase` — ConversationPhase enum (updated by every action node)
 - `turn_count` — incremented by `central_intelligence`

@@ -14,6 +14,39 @@
             overflow: hidden;
         }
 
+        /* ── Shared Form Elements ── */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #555;
+        }
+        .form-input, .form-select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #222;
+            background: #111;
+            color: #ccc;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+            width: 100%;
+        }
+        .form-input:focus, .form-select:focus { border-color: #444; }
+        .form-input:disabled, .form-select:disabled { opacity: 0.5; cursor: not-allowed; }
+        .form-select { appearance: none; cursor: pointer; }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
         /* ── Start Screen ── */
         #start-screen {
             height: 100vh;
@@ -21,7 +54,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 32px;
+            gap: 24px;
         }
         .logo { text-align: center; }
         .logo h1 {
@@ -36,26 +69,79 @@
             margin-top: 8px;
             letter-spacing: 1px;
         }
-        .start-options {
+
+        /* Setup card */
+        .setup-card {
+            background: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 460px;
             display: flex;
             flex-direction: column;
-            align-items: center;
             gap: 16px;
         }
-        .start-options select {
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            background: #151515;
-            color: #aaa;
-            font-size: 14px;
-            cursor: pointer;
-            min-width: 260px;
-            text-align: center;
-            appearance: none;
+        .setup-section-title {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #555;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #1a1a1a;
         }
+        .setup-divider {
+            border: none;
+            border-top: 1px solid #1a1a1a;
+            margin: 4px 0;
+        }
+
+        /* Agent badge (large, start screen) */
+        .agent-badge-lg {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+        .agent-badge-lg .agent-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+        .agent-badge-lg.pre_due { background: #1a2a1a; color: #6bc56b; }
+        .agent-badge-lg.pre_due .agent-dot { background: #6bc56b; }
+        .agent-badge-lg.bucket_x { background: #2a2a1a; color: #f5a623; }
+        .agent-badge-lg.bucket_x .agent-dot { background: #f5a623; }
+        .agent-badge-lg.npa { background: #2e1a1a; color: #e74c3c; }
+        .agent-badge-lg.npa .agent-dot { background: #e74c3c; }
+
+        /* Agent summary grid */
+        .agent-summary {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 2px 12px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .agent-summary .ak {
+            color: #555;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            font-size: 11px;
+        }
+        .agent-summary .av {
+            color: #999;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            font-size: 11px;
+        }
+
         .start-btn {
-            padding: 16px 48px;
+            padding: 14px 48px;
             border-radius: 50px;
             border: none;
             background: linear-gradient(135deg, #7c8cf5, #6366f1);
@@ -65,9 +151,9 @@
             cursor: pointer;
             letter-spacing: 0.5px;
             transition: all 0.3s;
-            min-width: 260px;
+            width: 100%;
         }
-        .start-btn:hover { transform: scale(1.03); box-shadow: 0 4px 24px rgba(99, 102, 241, 0.3); }
+        .start-btn:hover { transform: scale(1.02); box-shadow: 0 4px 24px rgba(99, 102, 241, 0.3); }
         .start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
         /* ── Call Screen ── */
@@ -98,6 +184,19 @@
             color: #7c8cf5;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        .call-counter {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: #888;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+        .call-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .call-timer {
             font-family: 'SF Mono', 'Menlo', monospace;
@@ -175,7 +274,7 @@
             to { opacity: 0; }
         }
 
-        /* ── Two Column Layout ── */
+        /* ── Three Column Layout ── */
         .call-body {
             flex: 1;
             display: flex;
@@ -192,7 +291,7 @@
             display: flex;
             flex-direction: column;
         }
-        .state-panel-header {
+        .panel-header {
             padding: 12px 16px;
             border-bottom: 1px solid #1a1a1a;
             font-size: 11px;
@@ -208,13 +307,13 @@
             background: #0d0d0d;
             z-index: 1;
         }
-        .state-panel-header .dot {
+        .panel-header .dot {
             width: 6px; height: 6px;
             border-radius: 50%;
             background: #333;
             transition: background 0.3s;
         }
-        .state-panel-header .dot.live { background: #6bc56b; }
+        .panel-header .dot.live { background: #6bc56b; }
 
         .state-section {
             padding: 10px 16px;
@@ -281,12 +380,120 @@
         .node-badge.handle_objection  { background: #2e1a1a; color: #e74c3c; }
         .node-badge.present_options   { background: #2a2a1a; color: #f5a623; }
         .node-badge.validate_commitment { background: #1a2a2a; color: #56c5b5; }
+        .node-badge.confirm_payment_date { background: #1a2e1a; color: #6bc56b; }
+        .node-badge.confirm_full_payment { background: #2a2a1a; color: #f5a623; }
         .node-badge.escalate          { background: #2e1a2a; color: #c56bc5; }
         .node-badge.end_agreement     { background: #1a2e1a; color: #6bc56b; }
         .node-badge.end_refusal       { background: #2e1a1a; color: #e74c3c; }
         .node-badge.end_callback      { background: #2a2a1a; color: #f5a623; }
 
-        /* ── Transcript Column (Right) ── */
+        /* ── Config Panel (Right) ── */
+        .config-panel {
+            width: 340px;
+            min-width: 340px;
+            border-left: 1px solid #1a1a1a;
+            background: #0d0d0d;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .config-panel .state-section:last-child { border-bottom: none; }
+
+        /* Agent badge in right panel (smaller) */
+        .agent-badge-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+        .agent-badge-sm .agent-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .agent-badge-sm.pre_due { background: #1a2a1a; color: #6bc56b; }
+        .agent-badge-sm.pre_due .agent-dot { background: #6bc56b; }
+        .agent-badge-sm.bucket_x { background: #2a2a1a; color: #f5a623; }
+        .agent-badge-sm.bucket_x .agent-dot { background: #f5a623; }
+        .agent-badge-sm.npa { background: #2e1a1a; color: #e74c3c; }
+        .agent-badge-sm.npa .agent-dot { background: #e74c3c; }
+
+        /* Call history entries */
+        .call-history-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid #111;
+            font-size: 11px;
+        }
+        .call-history-entry:last-child { border-bottom: none; }
+        .call-history-entry .che-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        .call-history-entry .che-label {
+            font-weight: 600;
+            color: #888;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+        .call-history-entry .che-duration {
+            color: #555;
+            font-family: 'SF Mono', 'Menlo', monospace;
+        }
+        .call-history-entry .che-outcome {
+            color: #999;
+            font-size: 11px;
+        }
+
+        /* Config panel action buttons */
+        .config-actions {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid #1a1a1a;
+        }
+        .next-call-btn {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #7c8cf5, #6366f1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        .next-call-btn:hover { transform: scale(1.02); box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3); }
+        .reset-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid #222;
+            background: transparent;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover { border-color: #444; color: #999; }
+
+        /* Between-calls override select */
+        .override-select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: #151515;
+            color: #ccc;
+            font-size: 12px;
+            cursor: pointer;
+            appearance: none;
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        /* ── Transcript Column (Center) ── */
         .call-main {
             flex: 1;
             display: flex;
@@ -468,12 +675,84 @@
             <h1>TARA</h1>
             <p>AI Collections Agent</p>
         </div>
-        <div class="start-options">
-            <select id="borrower-select">
-                <option value="BRW-001">Rajesh Kumar — Rs.85,000 (120 DPD)</option>
-                <option value="BRW-002">Priya Sharma — Rs.2,45,000 (210 DPD)</option>
-                <option value="BRW-003">Amit Patel — Rs.42,000 (45 DPD)</option>
-            </select>
+        <div class="setup-card">
+            <!-- Borrower Preset -->
+            <div>
+                <div class="setup-section-title">Borrower</div>
+                <div class="form-group">
+                    <label class="form-label">Preset</label>
+                    <select id="borrower-select" class="form-select" onchange="fillFromPreset()">
+                        <option value="BRW-001">Rajesh Kumar &mdash; &#8377;85,000 (120 DPD)</option>
+                        <option value="BRW-002">Priya Sharma &mdash; &#8377;2,45,000 (210 DPD)</option>
+                        <option value="BRW-003">Amit Patel &mdash; &#8377;42,000 (45 DPD)</option>
+                    </select>
+                </div>
+                <div class="form-row" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" id="inp-name" class="form-input" value="Rajesh Kumar" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (&#8377;)</label>
+                        <input type="number" id="inp-amount" class="form-input" value="85000" readonly>
+                    </div>
+                </div>
+                <div class="form-row" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label class="form-label">Days Past Due</label>
+                        <input type="number" id="inp-dpd" class="form-input" value="120" oninput="detectAgentType()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Risk Tier</label>
+                        <select id="inp-risk" class="form-select" disabled>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label class="form-label">Debt Type</label>
+                        <select id="inp-type" class="form-select" disabled>
+                            <option value="personal_loan">Personal Loan</option>
+                            <option value="credit_card">Credit Card</option>
+                            <option value="home_loan">Home Loan</option>
+                            <option value="auto_loan">Auto Loan</option>
+                            <option value="business_loan">Business Loan</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Creditor</label>
+                        <input type="text" id="inp-creditor" class="form-input" value="National Finance Corp" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="setup-divider">
+
+            <!-- Agent Profile -->
+            <div>
+                <div class="setup-section-title">Agent Profile</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div id="agent-badge-start" class="agent-badge-lg npa">
+                        <span class="agent-dot"></span>
+                        <span id="agent-badge-label">NPA</span>
+                    </div>
+                    <span id="agent-auto-hint" style="font-size:11px;color:#555;font-style:italic;">auto: 120 DPD &rarr; NPA</span>
+                </div>
+                <div id="agent-summary-start" class="agent-summary"></div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label class="form-label">Override</label>
+                    <select id="agent-override" class="form-select" onchange="updateAgentProfile()">
+                        <option value="auto" selected>Auto-detect from DPD</option>
+                        <option value="pre_due">Pre-Due (0-30 DPD)</option>
+                        <option value="bucket_x">Bucket X (31-90 DPD)</option>
+                        <option value="npa">NPA (91+ DPD)</option>
+                    </select>
+                </div>
+            </div>
+
             <button class="start-btn" id="start-btn" onclick="startCall()">
                 Start Conversation
             </button>
@@ -486,18 +765,21 @@
             <div class="call-header-left">
                 <h2>Tara</h2>
                 <span class="phase-badge" id="phase">connecting</span>
+                <span class="call-counter" id="call-counter">Call 1</span>
             </div>
-            <span class="call-timer" id="call-timer">0:00</span>
-            <button class="end-call-btn" onclick="endCall()">End Call</button>
+            <div class="call-header-right">
+                <span class="call-timer" id="call-timer">0:00</span>
+                <button class="end-call-btn" onclick="endCall()">End Call</button>
+            </div>
         </div>
 
-        <!-- Error toasts (right side) -->
+        <!-- Error toasts -->
         <div class="error-container" id="error-container"></div>
 
         <div class="call-body">
             <!-- ── State Panel (Left) ── -->
             <div class="state-panel" id="state-panel">
-                <div class="state-panel-header">
+                <div class="panel-header">
                     <div class="dot" id="state-dot"></div>
                     Conversation State
                 </div>
@@ -511,7 +793,7 @@
                 </div>
             </div>
 
-            <!-- ── Main Conversation (Right) ── -->
+            <!-- ── Main Conversation (Center) ── -->
             <div class="call-main">
                 <div class="transcript" id="transcript"></div>
 
@@ -529,10 +811,89 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── Config Panel (Right) ── -->
+            <div class="config-panel" id="config-panel">
+                <div class="panel-header">
+                    <div class="dot" id="config-dot"></div>
+                    Agent Config
+                </div>
+                <div id="config-content">
+                    <!-- Agent Profile -->
+                    <div class="state-section" id="config-agent-section"></div>
+                    <!-- Agent Override (between calls) -->
+                    <div class="state-section" id="config-override-section" style="display:none;">
+                        <div class="state-section-title">Change Agent for Next Call</div>
+                        <select id="agent-override-call" class="override-select" onchange="onCallAgentOverride()">
+                            <option value="pre_due">Pre-Due</option>
+                            <option value="bucket_x">Bucket X</option>
+                            <option value="npa">NPA</option>
+                        </select>
+                    </div>
+                    <!-- Borrower -->
+                    <div class="state-section" id="config-borrower-section"></div>
+                    <!-- Call History -->
+                    <div class="state-section" id="config-history-section">
+                        <div class="state-section-title">Call History</div>
+                        <div id="call-history-list">
+                            <div class="state-row">
+                                <span class="state-val muted">First call</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Action buttons (shown between calls) -->
+                <div class="config-actions" id="config-actions" style="display:none;">
+                    <button class="next-call-btn" id="next-call-btn" onclick="nextCall()">Next Call &rarr;</button>
+                    <button class="reset-btn" onclick="resetAll()">Reset All</button>
+                </div>
+            </div>
         </div>
     </div>
 
 <script>
+// ═══════════════════════════════════════════════════
+//  Constants: Agent Profiles & Borrower Presets
+// ═══════════════════════════════════════════════════
+const AGENT_PROFILES = {
+    pre_due: {
+        label: 'PRE-DUE',
+        cssClass: 'pre_due',
+        goal: 'Get payment date',
+        aggression: 'L1 (slow ramp)',
+        settlement: 'No',
+        installments: 'No',
+        maxTurns: 20,
+        consequences: 'CIBIL, late fees, future loans, bounce charges',
+    },
+    bucket_x: {
+        label: 'BUCKET X',
+        cssClass: 'bucket_x',
+        goal: 'Full recovery',
+        aggression: 'L2 (firm)',
+        settlement: 'No',
+        installments: 'No',
+        maxTurns: 30,
+        consequences: 'All + livelihood personalization',
+    },
+    npa: {
+        label: 'NPA',
+        cssClass: 'npa',
+        goal: 'Max settlement %',
+        aggression: 'L2\u2192L4',
+        settlement: '20-50% floor',
+        installments: '6/12/18 mo',
+        maxTurns: 30,
+        consequences: 'Full arsenal',
+    },
+};
+
+const BORROWER_PRESETS = {
+    'BRW-001': { name: 'Rajesh Kumar', amount: 85000, dpd: 120, risk: 'medium', type: 'personal_loan', creditor: 'National Finance Corp' },
+    'BRW-002': { name: 'Priya Sharma', amount: 245000, dpd: 210, risk: 'high', type: 'credit_card', creditor: 'Metro Bank Ltd' },
+    'BRW-003': { name: 'Amit Patel', amount: 42000, dpd: 45, risk: 'low', type: 'personal_loan', creditor: 'City Credit Union' },
+};
+
 // ═══════════════════════════════════════════════════
 //  State
 // ═══════════════════════════════════════════════════
@@ -558,14 +919,25 @@ let sampleRate = 16000;
 let incomingAudioChunks = [];
 let currentAudio = null;
 
+// Streaming audio playback (MediaSource API)
+let mediaSource = null;
+let sourceBuffer = null;
+let audioQueue = [];       // chunks waiting to be appended to SourceBuffer
+let streamingAudio = null;
+let isStreamingPlayback = false;
+// MediaSource streaming disabled — causes race conditions where endOfStream
+// fires before audio data arrives. Blob playback is stable and the other
+// optimizations (eager STT, LLM cache, VAD tuning, TTS pre-warm) cut ~3s.
+const USE_STREAMING = false;
+
 // VAD (Voice Activity Detection)
 let vadState = 'IDLE'; // IDLE | WAITING | SPEAKING | TRAILING
 let speechStartTime = 0;
 let silenceStartTime = 0;
 let vadInterval = null;
 const VAD_THRESHOLD = 0.012;
-const SILENCE_TIMEOUT = 1200;
-const SPEECH_MIN_DURATION = 300;
+const SILENCE_TIMEOUT = 800;    // Reduced from 1200ms — Hindi speech pauses < 800ms
+const SPEECH_MIN_DURATION = 200; // Reduced from 300ms — faster detection of real speech
 
 // Latency tracking
 let turnStartTime = 0;
@@ -582,8 +954,17 @@ let prevState = null;
 
 // Barge-in (speech overlap detection)
 let bargeInInterval = null;
-let bargeInSource = null;     // Temporary mic source for barge-in monitoring
-const BARGE_IN_THRESHOLD = 0.025;  // Higher than VAD_THRESHOLD to avoid speaker bleed
+let bargeInSource = null;
+const BARGE_IN_THRESHOLD = 0.025;
+
+// ── Multi-call state ──
+let callNumber = 0;
+let callHistory = [];
+let currentBorrowerId = '';
+let currentAgentType = '';
+let lastState = null;          // Latest state from state_update
+let isBetweenCalls = false;
+let nextCallAgentType = '';    // Override for next call
 
 // ═══════════════════════════════════════════════════
 //  AudioWorklet processor (inlined via Blob URL)
@@ -618,10 +999,88 @@ registerProcessor('pcm-processor', PCMProcessor);
 `;
 
 // ═══════════════════════════════════════════════════
+//  Start Screen Logic
+// ═══════════════════════════════════════════════════
+function fillFromPreset() {
+    const id = document.getElementById('borrower-select').value;
+    const b = BORROWER_PRESETS[id];
+    if (!b) return;
+    document.getElementById('inp-name').value = b.name;
+    document.getElementById('inp-amount').value = b.amount;
+    document.getElementById('inp-dpd').value = b.dpd;
+    document.getElementById('inp-risk').value = b.risk;
+    document.getElementById('inp-type').value = b.type;
+    document.getElementById('inp-creditor').value = b.creditor;
+    detectAgentType();
+}
+
+function detectAgentType() {
+    const dpd = parseInt(document.getElementById('inp-dpd').value) || 0;
+    const override = document.getElementById('agent-override').value;
+    let agent;
+    if (override !== 'auto') {
+        agent = override;
+    } else {
+        if (dpd <= 30) agent = 'pre_due';
+        else if (dpd <= 90) agent = 'bucket_x';
+        else agent = 'npa';
+    }
+    renderAgentBadgeStart(agent, dpd);
+}
+
+function updateAgentProfile() {
+    detectAgentType();
+}
+
+function renderAgentBadgeStart(agentType, dpd) {
+    const profile = AGENT_PROFILES[agentType];
+    const badge = document.getElementById('agent-badge-start');
+    const label = document.getElementById('agent-badge-label');
+    const hint = document.getElementById('agent-auto-hint');
+    const summary = document.getElementById('agent-summary-start');
+
+    badge.className = 'agent-badge-lg ' + profile.cssClass;
+    label.textContent = profile.label;
+
+    const override = document.getElementById('agent-override').value;
+    if (override === 'auto') {
+        hint.textContent = `auto: ${dpd} DPD \u2192 ${profile.label}`;
+        hint.style.display = '';
+    } else {
+        hint.style.display = 'none';
+    }
+
+    summary.innerHTML = `
+        <span class="ak">goal</span><span class="av">${profile.goal}</span>
+        <span class="ak">aggression</span><span class="av">${profile.aggression}</span>
+        <span class="ak">settlement</span><span class="av">${profile.settlement}</span>
+        <span class="ak">installments</span><span class="av">${profile.installments}</span>
+        <span class="ak">max turns</span><span class="av">${profile.maxTurns}</span>
+    `;
+}
+
+// Initialize start screen on load
+document.addEventListener('DOMContentLoaded', () => {
+    fillFromPreset();
+});
+
+// ═══════════════════════════════════════════════════
 //  Mic Setup
 // ═══════════════════════════════════════════════════
 async function setupMic() {
     try {
+        // getUserMedia requires a secure context (HTTPS or localhost/127.0.0.1)
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (!isLocalhost) {
+                showError('Mic requires secure context. Open http://localhost:' + location.port + ' instead of ' + location.hostname);
+                console.error('[MIC] navigator.mediaDevices unavailable — not a secure context. Use http://localhost:' + location.port);
+            } else {
+                showError('Browser does not support getUserMedia');
+                console.error('[MIC] navigator.mediaDevices.getUserMedia not supported');
+            }
+            return false;
+        }
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         try {
             audioContext = new AudioContext({ sampleRate: 16000 });
@@ -655,15 +1114,45 @@ async function startCall() {
     btn.disabled = true;
     btn.textContent = 'Connecting...';
 
+    // Determine agent type
+    const override = document.getElementById('agent-override').value;
+    let agentType;
+    if (override !== 'auto') {
+        agentType = override;
+    } else {
+        const dpd = parseInt(document.getElementById('inp-dpd').value) || 0;
+        if (dpd <= 30) agentType = 'pre_due';
+        else if (dpd <= 90) agentType = 'bucket_x';
+        else agentType = 'npa';
+    }
+
+    currentBorrowerId = borrowerId;
+    currentAgentType = agentType;
+    callNumber = 1;
+    callHistory = [];
+    isBetweenCalls = false;
+    lastState = null;
+    prevState = null;
+
     try {
         const hasMic = await setupMic();
-        if (!hasMic) setStatus('listening', 'Mic unavailable — use text input');
+        if (!hasMic) setStatus('listening', 'Mic unavailable \u2014 use text input');
 
-        const res = await fetch(`/api/session?borrower_id=${borrowerId}`, { method: 'POST' });
+        const res = await fetch(`/api/session?borrower_id=${borrowerId}&agent_type=${agentType}`, { method: 'POST' });
         const data = await res.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.textContent = 'Start Conversation';
+            return;
+        }
 
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('call-screen').style.display = 'flex';
+
+        // Update header
+        document.getElementById('call-counter').textContent = 'Call ' + callNumber;
 
         // Start call timer
         callStartTime = Date.now();
@@ -673,8 +1162,16 @@ async function startCall() {
         addMessage('tara', data.opening_message);
         updatePhase(data.phase);
 
-        // Render initial state from session creation
-        if (data.state) renderState(data.state);
+        // Render initial state + config panel
+        if (data.state) {
+            renderState(data.state);
+            lastState = data.state;
+        }
+        renderConfigPanel(agentType);
+
+        // Hide between-call UI
+        document.getElementById('config-actions').style.display = 'none';
+        document.getElementById('config-override-section').style.display = 'none';
 
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${location.host}/ws/${data.session_id}`);
@@ -692,14 +1189,156 @@ async function startCall() {
     }
 }
 
+// ═══════════════════════════════════════════════════
+//  End Call + Multi-Call
+// ═══════════════════════════════════════════════════
 function endCall() {
     isTerminal = true;
+    isBetweenCalls = true;
     stopListening();
     stopBargeInMonitor();
     if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     if (ws) { ws.close(); ws = null; }
     setStatus('', 'Call ended');
+
+    // Record call outcome
+    const outcome = lastState?.call_progress?.call_outcome || 'ended';
+    const phase = lastState?.conversation_phase || 'unknown';
+    const duration = document.getElementById('call-timer').textContent;
+    callHistory.push({
+        call_number: callNumber,
+        agent_type: currentAgentType,
+        outcome: outcome,
+        phase: String(phase).replace('ConversationPhase.', ''),
+        duration: duration,
+    });
+
+    // Show between-calls UI
+    document.getElementById('config-actions').style.display = 'flex';
+    document.getElementById('config-override-section').style.display = '';
+    document.getElementById('agent-override-call').value = currentAgentType;
+    nextCallAgentType = currentAgentType;
+
+    // Update call history in config panel
+    renderCallHistory();
+}
+
+async function nextCall() {
+    // Determine agent type for next call
+    const agentType = nextCallAgentType || currentAgentType;
+    currentAgentType = agentType;
+    callNumber++;
+    isBetweenCalls = false;
+    isTerminal = false;
+    isTaraSpeaking = false;
+    lastState = null;
+    prevState = null;
+
+    // Clear transcript
+    document.getElementById('transcript').innerHTML = '';
+    document.getElementById('latency-bar').innerHTML = '';
+
+    // Hide between-calls UI
+    document.getElementById('config-actions').style.display = 'none';
+    document.getElementById('config-override-section').style.display = 'none';
+
+    // Update header
+    document.getElementById('call-counter').textContent = 'Call ' + callNumber;
+
+    // Reset timer
+    callStartTime = Date.now();
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(updateCallTimer, 1000);
+    updateCallTimer();
+
+    setStatus('thinking', 'Connecting...');
+
+    try {
+        const res = await fetch('/api/session/next-call', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                borrower_id: currentBorrowerId,
+                agent_type: agentType,
+                previous_calls: callHistory,
+            }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+
+        addMessage('tara', data.opening_message);
+        updatePhase(data.phase);
+
+        if (data.state) {
+            renderState(data.state);
+            lastState = data.state;
+        }
+        renderConfigPanel(agentType);
+
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}/ws/${data.session_id}`);
+        ws.binaryType = 'arraybuffer';
+        ws.onmessage = handleWsMessage;
+        ws.onclose = () => { setStatus('', 'Call ended'); isTerminal = true; };
+        ws.onerror = (e) => { console.error('WS error:', e); setStatus('', 'Connection error'); };
+
+        setStatus('speaking', 'Tara is speaking...');
+    } catch (err) {
+        console.error(err);
+        showError('Failed to start next call: ' + err.message);
+    }
+}
+
+function resetAll() {
+    // Stop everything
+    isTerminal = true;
+    stopListening();
+    stopBargeInMonitor();
+    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (ws) { ws.close(); ws = null; }
+
+    // Reset state
+    callNumber = 0;
+    callHistory = [];
+    currentBorrowerId = '';
+    currentAgentType = '';
+    lastState = null;
+    prevState = null;
+    isBetweenCalls = false;
+    isTerminal = false;
+    isTaraSpeaking = false;
+
+    // Clear transcript
+    document.getElementById('transcript').innerHTML = '';
+    document.getElementById('latency-bar').innerHTML = '';
+
+    // Reset state panel
+    document.getElementById('state-content').innerHTML = `
+        <div class="state-section">
+            <div class="state-row">
+                <span class="state-key">waiting</span>
+                <span class="state-val muted">start a call...</span>
+            </div>
+        </div>`;
+    document.getElementById('state-dot').classList.remove('live');
+
+    // Show start screen
+    document.getElementById('call-screen').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'flex';
+
+    // Reset start button
+    document.getElementById('start-btn').disabled = false;
+    document.getElementById('start-btn').textContent = 'Start Conversation';
+}
+
+function onCallAgentOverride() {
+    nextCallAgentType = document.getElementById('agent-override-call').value;
 }
 
 // ═══════════════════════════════════════════════════
@@ -785,11 +1424,19 @@ function runVAD() {
 // ═══════════════════════════════════════════════════
 function handleWsMessage(event) {
     if (event.data instanceof ArrayBuffer) {
-        incomingAudioChunks.push(event.data);
+        if (USE_STREAMING && isStreamingPlayback) {
+            // Streaming: queue chunk for immediate playback via MediaSource
+            audioQueue.push(new Uint8Array(event.data));
+            processAudioQueue();
+        } else {
+            // Fallback: accumulate for blob playback
+            incomingAudioChunks.push(event.data);
+        }
         return;
     }
 
     const data = JSON.parse(event.data);
+    console.log('[WS] Received:', data.type, data.status || '');
 
     switch (data.type) {
         case 'transcript':
@@ -810,7 +1457,15 @@ function handleWsMessage(event) {
             break;
 
         case 'status':
-            if (data.status === 'speaking') { isTaraSpeaking = true; setStatus('speaking', 'Tara is speaking...'); }
+            if (data.status === 'speaking') {
+                isTaraSpeaking = true;
+                setStatus('speaking', 'Tara is speaking...');
+                // Init streaming playback when TTS is about to start
+                if (USE_STREAMING) {
+                    console.log('[WS] Speaking status → init streaming playback');
+                    initStreamingPlayback();
+                }
+            }
             else if (data.status === 'thinking') setStatus('thinking', 'Processing...');
             else if (data.status === 'listening') setStatus('listening', 'Listening...');
             else if (data.status === 'no_speech') {
@@ -820,22 +1475,52 @@ function handleWsMessage(event) {
             break;
 
         case 'audio_end':
+            console.log('[WS] audio_end → isStreamingPlayback=', isStreamingPlayback,
+                'audioQueue=', audioQueue.length, 'blobChunks=', incomingAudioChunks.length);
             if (data.latency) Object.assign(latencyData, data.latency);
             if (turnStartTime) latencyData.total_ms = Math.round(performance.now() - turnStartTime);
             showLatency(latencyData);
-            playAudioChunks();
+            if (isStreamingPlayback) {
+                finalizeStreamingPlayback();
+            } else {
+                playAudioChunks();
+            }
             break;
 
         case 'state_update':
-            if (data.state) renderState(data.state);
+            if (data.state) {
+                renderState(data.state);
+                lastState = data.state;
+            }
             break;
 
         case 'terminal':
             isTerminal = true;
             if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
-            // Don't close immediately — wait for audio to finish playing
-            // The playAudioChunks() → autoStartListening() flow will see isTerminal
-            // and stop naturally. We close the WS after a grace period.
+            // Record outcome from latest state
+            if (lastState) {
+                const outcome = lastState.call_progress?.call_outcome || 'completed';
+                const phase = String(lastState.conversation_phase || 'unknown').replace('ConversationPhase.', '');
+                const duration = document.getElementById('call-timer').textContent;
+                // Only add if not already recorded by endCall
+                if (!callHistory.find(h => h.call_number === callNumber)) {
+                    callHistory.push({
+                        call_number: callNumber,
+                        agent_type: currentAgentType,
+                        outcome: outcome,
+                        phase: phase,
+                        duration: duration,
+                    });
+                }
+            }
+            isBetweenCalls = true;
+            // Show between-calls UI
+            document.getElementById('config-actions').style.display = 'flex';
+            document.getElementById('config-override-section').style.display = '';
+            document.getElementById('agent-override-call').value = currentAgentType;
+            nextCallAgentType = currentAgentType;
+            renderCallHistory();
+
             setTimeout(() => {
                 setStatus('', 'Call completed');
                 if (ws) { ws.close(); ws = null; }
@@ -850,9 +1535,151 @@ function handleWsMessage(event) {
 }
 
 // ═══════════════════════════════════════════════════
-//  Audio Playback
+//  Audio Playback — Streaming (MediaSource) + Fallback (Blob)
 // ═══════════════════════════════════════════════════
+
+// ── Streaming playback via MediaSource API ──
+// Plays audio chunks as they arrive, eliminating the wait for all chunks.
+// Supported: Chrome, Safari. Falls back to blob on Firefox.
+
+let streamingFinalized = false;  // true after audio_end received
+let streamingSafetyTimer = null; // safety timeout to prevent stuck state
+
+function initStreamingPlayback() {
+    if (isStreamingPlayback) return; // already initialised
+    console.log('[AUDIO] initStreamingPlayback: USE_STREAMING =', USE_STREAMING);
+
+    streamingFinalized = false;
+    mediaSource = new MediaSource();
+    streamingAudio = new Audio();
+    const url = URL.createObjectURL(mediaSource);
+    streamingAudio.src = url;
+    currentAudio = streamingAudio; // for barge-in compatibility
+
+    mediaSource.addEventListener('sourceopen', () => {
+        console.log('[AUDIO] MediaSource sourceopen fired');
+        try {
+            sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+            sourceBuffer.addEventListener('updateend', () => {
+                processAudioQueue();
+                // If finalized and queue empty, call endOfStream
+                if (streamingFinalized && audioQueue.length === 0 && !sourceBuffer.updating) {
+                    try {
+                        if (mediaSource.readyState === 'open') {
+                            console.log('[AUDIO] All chunks appended, calling endOfStream');
+                            mediaSource.endOfStream();
+                        }
+                    } catch (e) { console.debug('[AUDIO] endOfStream error:', e); }
+                }
+            });
+            console.log('[AUDIO] SourceBuffer created, flushing', audioQueue.length, 'queued chunks');
+            processAudioQueue(); // flush anything queued before sourceopen
+        } catch (e) {
+            console.warn('[AUDIO] addSourceBuffer failed, falling back:', e);
+            cleanupStreamingPlayback();
+        }
+    });
+
+    streamingAudio.addEventListener('ended', () => {
+        console.log('[AUDIO] Streaming audio ended event');
+        if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
+        cleanupStreamingPlayback();
+        autoStartListening();
+    });
+
+    streamingAudio.addEventListener('error', (e) => {
+        console.warn('[AUDIO] Streaming audio error:', streamingAudio.error);
+        if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
+        cleanupStreamingPlayback();
+        // Fall back: play whatever we accumulated
+        playAudioChunks();
+    });
+
+    streamingAudio.play().then(() => {
+        console.log('[AUDIO] Streaming play() started OK');
+    }).catch(e => {
+        console.warn('[AUDIO] Streaming play() rejected:', e);
+        cleanupStreamingPlayback();
+    });
+
+    isStreamingPlayback = true;
+
+    // Start barge-in monitoring
+    if (micAvailable && !isTerminal) startBargeInMonitor();
+}
+
+function processAudioQueue() {
+    if (!sourceBuffer || sourceBuffer.updating || audioQueue.length === 0) return;
+    try {
+        const chunk = audioQueue.shift();
+        sourceBuffer.appendBuffer(chunk);
+    } catch (e) {
+        console.warn('[AUDIO] appendBuffer error:', e);
+    }
+}
+
+function finalizeStreamingPlayback() {
+    console.log('[AUDIO] finalizeStreamingPlayback called, isStreamingPlayback=', isStreamingPlayback,
+        'mediaSource=', !!mediaSource, 'sourceBuffer=', !!sourceBuffer,
+        'queueLen=', audioQueue.length);
+
+    if (!isStreamingPlayback || !mediaSource) {
+        console.log('[AUDIO] Not streaming, falling back to blob playback');
+        playAudioChunks();
+        return;
+    }
+
+    streamingFinalized = true;
+
+    // If sourceBuffer exists, queue is empty, and not updating — end now
+    if (sourceBuffer && audioQueue.length === 0 && !sourceBuffer.updating) {
+        try {
+            if (mediaSource.readyState === 'open') {
+                console.log('[AUDIO] Immediate endOfStream (queue already empty)');
+                mediaSource.endOfStream();
+            }
+        } catch (e) { console.debug('[AUDIO] endOfStream:', e); }
+    } else if (!sourceBuffer) {
+        // sourceopen never fired — no SourceBuffer, audio can't play
+        console.warn('[AUDIO] No sourceBuffer when finalizing — sourceopen never fired, cleaning up');
+        cleanupStreamingPlayback();
+        autoStartListening();
+        return;
+    }
+    // else: updateend handler will call endOfStream when queue drains
+
+    // Safety timeout: if 'ended' event doesn't fire within 10s, force cleanup
+    streamingSafetyTimer = setTimeout(() => {
+        console.warn('[AUDIO] Safety timeout — streaming ended event never fired, forcing cleanup');
+        streamingSafetyTimer = null;
+        cleanupStreamingPlayback();
+        autoStartListening();
+    }, 10000);
+}
+
+function cleanupStreamingPlayback() {
+    console.log('[AUDIO] cleanupStreamingPlayback');
+    if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
+    if (streamingAudio) {
+        URL.revokeObjectURL(streamingAudio.src);
+        // Don't pause if ended naturally
+        if (!streamingAudio.ended) streamingAudio.pause();
+        streamingAudio = null;
+    }
+    currentAudio = null;
+    mediaSource = null;
+    sourceBuffer = null;
+    audioQueue = [];
+    isStreamingPlayback = false;
+    streamingFinalized = false;
+    isTaraSpeaking = false;
+    stopBargeInMonitor();
+}
+
+// ── Fallback: blob-based playback (Firefox, error recovery) ──
+
 function playAudioChunks() {
+    console.log('[AUDIO] playAudioChunks: chunks =', incomingAudioChunks.length);
     if (incomingAudioChunks.length === 0) {
         isTaraSpeaking = false;
         autoStartListening();
@@ -863,6 +1690,7 @@ function playAudioChunks() {
     const url = URL.createObjectURL(blob);
     currentAudio = new Audio(url);
     currentAudio.onended = () => {
+        console.log('[AUDIO] Blob audio ended');
         URL.revokeObjectURL(url);
         currentAudio = null;
         isTaraSpeaking = false;
@@ -870,7 +1698,7 @@ function playAudioChunks() {
         autoStartListening();
     };
     currentAudio.play().catch(e => {
-        console.error('Playback failed:', e);
+        console.error('[AUDIO] Blob playback failed:', e);
         currentAudio = null;
         isTaraSpeaking = false;
         stopBargeInMonitor();
@@ -886,8 +1714,6 @@ function startBargeInMonitor() {
     if (!audioStream || !analyserNode || !audioContext) return;
     if (audioContext.state === 'suspended') audioContext.resume();
 
-    // Create a temporary mic source just for RMS monitoring
-    // (separate from the recording source managed by startListening/stopListening)
     bargeInSource = audioContext.createMediaStreamSource(audioStream);
     bargeInSource.connect(analyserNode);
 
@@ -904,19 +1730,23 @@ function startBargeInMonitor() {
         const rms = Math.sqrt(sum / data.length);
 
         if (rms > BARGE_IN_THRESHOLD) {
-            // User is speaking over Tara — interrupt!
+            console.log('[BARGE-IN] User speech detected, interrupting Tara');
             stopBargeInMonitor();
-
-            // Stop Tara's audio immediately
-            if (currentAudio) {
+            // Clean up streaming playback if active
+            if (isStreamingPlayback) {
+                cleanupStreamingPlayback();
+            } else if (currentAudio) {
                 currentAudio.pause();
                 URL.revokeObjectURL(currentAudio.src);
                 currentAudio = null;
             }
             isTaraSpeaking = false;
-            incomingAudioChunks = [];  // Discard any remaining buffered audio
-
-            // Start recording the user's speech
+            incomingAudioChunks = [];
+            audioQueue = [];
+            // Notify server to cancel TTS immediately
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'barge_in' }));
+            }
             startListening();
         }
     }, 60);
@@ -928,13 +1758,23 @@ function stopBargeInMonitor() {
 }
 
 function autoStartListening() {
+    console.log('[MIC] autoStartListening called: isTerminal=', isTerminal,
+        'micAvailable=', micAvailable, 'isRecording=', isRecording,
+        'isTaraSpeaking=', isTaraSpeaking);
     if (isTerminal || !micAvailable) {
         if (!isTerminal) setStatus('', 'Type your response');
+        console.log('[MIC] autoStartListening skipped: terminal=', isTerminal, 'mic=', micAvailable);
         return;
     }
     setTimeout(() => {
-        if (!isTerminal && !isRecording && !isTaraSpeaking) startListening();
-    }, 400);
+        if (!isTerminal && !isRecording && !isTaraSpeaking) {
+            console.log('[MIC] autoStartListening → startListening()');
+            startListening();
+        } else {
+            console.log('[MIC] autoStartListening timeout skipped: terminal=', isTerminal,
+                'recording=', isRecording, 'speaking=', isTaraSpeaking);
+        }
+    }, 150);  // Reduced from 400ms — faster mic reopen after Tara speaks
 }
 
 // ═══════════════════════════════════════════════════
@@ -945,7 +1785,13 @@ function sendText() {
     const text = input.value.trim();
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
     if (isRecording) stopListening();
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; isTaraSpeaking = false; }
+    if (currentAudio) {
+        currentAudio.pause(); currentAudio = null; isTaraSpeaking = false;
+        // Notify server to cancel TTS
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'barge_in' }));
+        }
+    }
 
     addMessage('user', text);
     turnStartTime = performance.now();
@@ -956,14 +1802,13 @@ function sendText() {
 }
 
 // ═══════════════════════════════════════════════════
-//  State Panel Rendering
+//  State Panel Rendering (Left)
 // ═══════════════════════════════════════════════════
 function renderState(state) {
     const container = document.getElementById('state-content');
     const dot = document.getElementById('state-dot');
     dot.classList.add('live');
 
-    // Build sections
     let html = '';
 
     // ── Routing Decision ──
@@ -973,7 +1818,7 @@ function renderState(state) {
         <div class="state-section-title">Routing Decision</div>
         <div class="state-row" data-key="next_node">
             <span class="state-key">next_node</span>
-            <span class="node-badge ${node}">${node || '—'}</span>
+            <span class="node-badge ${node}">${node || '\u2014'}</span>
         </div>
         ${rd.reasoning ? `<div class="state-reasoning">${escapeHtml(rd.reasoning)}</div>` : ''}
     </div>`;
@@ -981,8 +1826,10 @@ function renderState(state) {
     // ── Session State ──
     const phase = String(state.conversation_phase || 'init').replace('ConversationPhase.', '');
     const phaseClass = phase.startsWith('completed') ? 'success' : 'highlight';
+    const agentLabel = (AGENT_PROFILES[state.agent_type] || {}).label || state.agent_type || '';
     html += `<div class="state-section">
         <div class="state-section-title">Session</div>
+        ${agentLabel ? stateRow('agent', agentLabel, state.agent_type === 'pre_due' ? 'success' : state.agent_type === 'bucket_x' ? 'warning' : 'danger') : ''}
         ${stateRow('phase', phase, phaseClass)}
         ${stateRow('turn', state.turn_count || 0)}
         ${stateRow('messages', state.message_count || 0)}
@@ -1005,7 +1852,7 @@ function renderState(state) {
     const aggrLevel = state.aggression_level || 1;
     const aggrDesc = state.aggression_desc || '';
     const aggrClass = aggrLevel >= 4 ? 'danger' : aggrLevel >= 3 ? 'warning' : aggrLevel >= 2 ? '' : 'success';
-    const aggrBar = '\u2588'.repeat(aggrLevel) + '\u2591'.repeat(4 - aggrLevel);  // ████░░
+    const aggrBar = '\u2588'.repeat(aggrLevel) + '\u2591'.repeat(4 - aggrLevel);
     const objection = String(state.current_objection || 'none').replace('ObjectionType.', '');
     const objections = state.objections_raised || [];
     html += `<div class="state-section">
@@ -1038,13 +1885,13 @@ function renderState(state) {
     if (hasProgress || locked) {
         html += `<div class="state-section">
             <div class="state-section-title">Call Progress</div>
-            ${partialAmt > 0 ? stateRow('offer', '₹' + Number(partialAmt).toLocaleString('en-IN'), locked ? 'success' : 'warning') : ''}
-            ${locked ? stateRow('locked', '✓ LOCKED', 'success') : ''}
-            ${remainingAmt > 0 ? stateRow('remaining', '₹' + Number(remainingAmt).toLocaleString('en-IN'), 'muted') : ''}
+            ${partialAmt > 0 ? stateRow('offer', '\u20B9' + Number(partialAmt).toLocaleString('en-IN'), locked ? 'success' : 'warning') : ''}
+            ${locked ? stateRow('locked', '\u2713 LOCKED', 'success') : ''}
+            ${remainingAmt > 0 ? stateRow('remaining', '\u20B9' + Number(remainingAmt).toLocaleString('en-IN'), 'muted') : ''}
             ${cp.payment_mode_confirmed ? stateRow('mode', cp.payment_mode_confirmed) : ''}
             ${idChallenged ? stateRow('identity', 'CHALLENGED (turn ' + (cp.identity_challenge_turn || '?') + ')', 'danger') : ''}
             ${cp.claimed_identity ? stateRow('claims', cp.claimed_identity, 'warning') : ''}
-            ${loopCount > 1 ? stateRow('loop', lastObj + ' ×' + loopCount, 'warning') : ''}
+            ${loopCount > 1 ? stateRow('loop', lastObj + ' \u00D7' + loopCount, 'warning') : ''}
             ${callOutcome ? stateRow('outcome', callOutcome, callOutcome === 'payment_committed' ? 'success' : 'danger') : ''}
         </div>`;
     }
@@ -1055,13 +1902,13 @@ function renderState(state) {
     const dpdClass = dpd > 180 ? 'danger' : dpd > 90 ? 'warning' : dpd > 30 ? '' : 'success';
     html += `<div class="state-section">
         <div class="state-section-title">Borrower</div>
-        ${stateRow('name', bp.full_name || '—')}
-        ${stateRow('id', bp.borrower_id || '—', 'muted')}
-        ${stateRow('amount', bp.debt_amount ? '₹' + Number(bp.debt_amount).toLocaleString('en-IN') : '—')}
-        ${stateRow('type', (bp.debt_type || '—').replace(/_/g, ' '))}
+        ${stateRow('name', bp.full_name || '\u2014')}
+        ${stateRow('id', bp.borrower_id || '\u2014', 'muted')}
+        ${stateRow('amount', bp.debt_amount ? '\u20B9' + Number(bp.debt_amount).toLocaleString('en-IN') : '\u2014')}
+        ${stateRow('type', (bp.debt_type || '\u2014').replace(/_/g, ' '))}
         ${stateRow('DPD', dpd + ' days', dpdClass)}
-        ${stateRow('risk', bp.risk_tier || '—', bp.risk_tier === 'high' ? 'danger' : bp.risk_tier === 'medium' ? 'warning' : '')}
-        ${stateRow('lender', bp.original_creditor || '—', 'muted')}
+        ${stateRow('risk', bp.risk_tier || '\u2014', bp.risk_tier === 'high' ? 'danger' : bp.risk_tier === 'medium' ? 'warning' : '')}
+        ${stateRow('lender', bp.original_creditor || '\u2014', 'muted')}
     </div>`;
 
     // ── Escalation ──
@@ -1089,7 +1936,6 @@ function stateRow(key, val, cls) {
 }
 
 function highlightChanges(newState, oldState) {
-    // Simple diff: compare flat keys and flash rows that changed
     const flat = (s) => ({
         phase: s.conversation_phase,
         turn: s.turn_count,
@@ -1109,11 +1955,77 @@ function highlightChanges(newState, oldState) {
             const row = document.querySelector(`.state-row[data-key="${key}"]`);
             if (row) {
                 row.classList.remove('updated');
-                void row.offsetWidth; // force reflow for re-triggering animation
+                void row.offsetWidth;
                 row.classList.add('updated');
             }
         }
     }
+}
+
+// ═══════════════════════════════════════════════════
+//  Config Panel Rendering (Right)
+// ═══════════════════════════════════════════════════
+function renderConfigPanel(agentType) {
+    const profile = AGENT_PROFILES[agentType] || AGENT_PROFILES.npa;
+    const dot = document.getElementById('config-dot');
+    dot.classList.add('live');
+
+    // Agent profile section
+    const agentSection = document.getElementById('config-agent-section');
+    agentSection.innerHTML = `
+        <div class="state-section-title">Agent Profile</div>
+        <div style="margin-bottom:8px;">
+            <span class="agent-badge-sm ${profile.cssClass}">
+                <span class="agent-dot"></span>
+                ${profile.label}
+            </span>
+        </div>
+        ${stateRow('goal', profile.goal)}
+        ${stateRow('aggression', profile.aggression)}
+        ${stateRow('settlement', profile.settlement)}
+        ${stateRow('installments', profile.installments)}
+        ${stateRow('max turns', profile.maxTurns)}
+    `;
+
+    // Borrower section
+    const borrowerSection = document.getElementById('config-borrower-section');
+    const preset = BORROWER_PRESETS[currentBorrowerId] || {};
+    borrowerSection.innerHTML = `
+        <div class="state-section-title">Borrower</div>
+        ${stateRow('name', preset.name || currentBorrowerId)}
+        ${stateRow('amount', preset.amount ? '\u20B9' + Number(preset.amount).toLocaleString('en-IN') : '\u2014')}
+        ${stateRow('DPD', (preset.dpd || 0) + ' days')}
+        ${stateRow('risk', preset.risk || '\u2014')}
+        ${stateRow('type', (preset.type || '\u2014').replace(/_/g, ' '))}
+        ${stateRow('creditor', preset.creditor || '\u2014', 'muted')}
+    `;
+}
+
+function renderCallHistory() {
+    const list = document.getElementById('call-history-list');
+    if (callHistory.length === 0) {
+        list.innerHTML = `<div class="state-row"><span class="state-val muted">First call</span></div>`;
+        return;
+    }
+    let html = '';
+    for (const entry of callHistory) {
+        const agentProfile = AGENT_PROFILES[entry.agent_type] || {};
+        const outcomeClass = entry.outcome === 'payment_committed' ? 'success' :
+                             entry.outcome === 'refusal' ? 'danger' : 'warning';
+        html += `<div class="call-history-entry">
+            <div class="che-header">
+                <span class="che-label">Call ${entry.call_number}</span>
+                <span class="che-duration">${entry.duration}</span>
+            </div>
+            <div class="che-outcome">
+                <span class="agent-badge-sm ${agentProfile.cssClass || 'npa'}" style="font-size:9px;padding:2px 6px;">
+                    <span class="agent-dot"></span>${agentProfile.label || entry.agent_type}
+                </span>
+                <span class="state-val ${outcomeClass}" style="margin-left:6px;font-size:11px;">${entry.outcome}</span>
+            </div>
+        </div>`;
+    }
+    list.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1221,13 +2133,11 @@ function showError(message) {
     toast.className = 'error-toast';
     toast.innerHTML = `<div class="error-label">Error</div><div class="error-msg">${escapeHtml(message)}</div>`;
     container.appendChild(toast);
-    // Auto-remove after 9 seconds (8s visible + 1s fade buffer)
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 9000);
-    // Cap visible toasts at 5
     while (container.children.length > 5) container.firstChild.remove();
 }
 
-// ── Info Toast (for non-error feedback like no_speech) ──
+// ── Info Toast ──
 function showToast(message) {
     const container = document.getElementById('error-container');
     const toast = document.createElement('div');

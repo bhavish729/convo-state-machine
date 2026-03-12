@@ -9,9 +9,13 @@
 
 No tools are bound — all routing is handled via structured JSON in the prompt.
 
-## prompts.py — System Prompt Builder
+## prompts.py — Legacy NPA Prompt (Backward Compat)
 
-`build_central_intelligence_prompt(state)` constructs a ~14K char system prompt. This is the **single most important file** in the project — all Tara behavior is driven by this prompt.
+`build_central_intelligence_prompt(state)` constructs the original NPA system prompt. This file is kept for backward compatibility — the active prompts are now in `agents/*/prompts.py`.
+
+**Active prompt files**: `agents/pre_due/prompts.py`, `agents/bucket_x/prompts.py`, `agents/npa/prompts.py`
+
+Each agent has its own `build_*_prompt(state) → str` and `_get_aggression_level(sentiment, turn_count, dpd)` function. The prompt structure below applies to the NPA prompt and is the template for all agents:
 
 ### Prompt Structure
 

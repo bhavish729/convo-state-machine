@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -14,6 +15,11 @@ from tara.web.app import create_app
 
 
 def main():
+    # Configure logging so tara.* loggers output to terminal
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s  %(name)s  %(message)s",
+    )
     # Log LangSmith status at startup
     tracing = os.environ.get("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     project = os.environ.get("LANGCHAIN_PROJECT", "default")

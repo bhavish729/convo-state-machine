@@ -1,23 +1,41 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+from typing import Callable
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from tara.llm.prompts import build_central_intelligence_prompt
 from tara.llm.provider import get_llm
 from tara.state.schema import RoutingDecision, SentimentLevel
 
+logger = logging.getLogger(__name__)
 
-def central_intelligence(state: dict) -> dict:
+
+def make_central_intelligence(prompt_builder: Callable[[dict], str]):
+    """Factory: create a CI node wired to a specific prompt builder.
+
+    Each agent (pre_due, bucket_x, npa) provides its own prompt builder
+    so the same CI logic drives different conversation strategies.
+    """
+
+    def central_intelligence(state: dict) -> dict:
+        return _central_intelligence_impl(state, prompt_builder)
+
+    return central_intelligence
+
+
+def _central_intelligence_impl(
+    state: dict, prompt_builder: Callable[[dict], str]
+) -> dict:
     """
     The brain of Tara. Evaluates full conversation context and
     decides which action node should execute next.
 
     Sets routing_decision for the conditional edge to inspect.
     """
-    system_prompt = build_central_intelligence_prompt(state)
+    system_prompt = prompt_builder(state)
     llm = get_llm()  # No tools — prompt handles routing directly
 
     conversation = list(state.get("messages", []))
@@ -42,11 +60,17 @@ def central_intelligence(state: dict) -> dict:
     response = llm.invoke(llm_messages)
     routing = _parse_routing_decision(response)
 
+    logger.info(
+        f"[CI] Turn {state.get('turn_count', 0)+1}: next_node='{routing['next_node']}', "
+        f"reasoning='{routing.get('reasoning', '')[:80]}'"
+    )
+
     # Retry once if JSON parse failed (avoids unnecessary escalation)
     if (
         routing["next_node"] == "escalate"
         and "Failed to parse" in routing["reasoning"]
     ):
+        logger.warning("[CI] JSON parse failed, retrying LLM call...")
         retry_msg = HumanMessage(
             content="Your previous response was not valid JSON. "
             "Return ONLY the JSON object with keys: next_node, reasoning, "
@@ -54,8 +78,9 @@ def central_intelligence(state: dict) -> dict:
         )
         response = llm.invoke(llm_messages + [response, retry_msg])
         routing = _parse_routing_decision(response)
+        logger.info(f"[CI] Retry result: next_node='{routing['next_node']}'")
 
-    # --- Sentiment tracking (was NEVER updated before — always stuck on "neutral") ---
+    # --- Sentiment tracking ---
     _SENTIMENT_MAP = {
         "very_negative": SentimentLevel.VERY_NEGATIVE,
         "negative": SentimentLevel.NEGATIVE,
@@ -122,6 +147,14 @@ def central_intelligence(state: dict) -> dict:
         result["call_progress"] = progress_update
 
     return result
+
+
+# Backward-compatible default: uses NPA prompt (original behavior)
+def central_intelligence(state: dict) -> dict:
+    """Default CI node using the NPA prompt (backward compatibility)."""
+    from tara.llm.prompts import build_central_intelligence_prompt
+
+    return _central_intelligence_impl(state, build_central_intelligence_prompt)
 
 
 def _extract_text_content(response: AIMessage) -> str:
