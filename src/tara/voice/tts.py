@@ -132,16 +132,19 @@ def _preprocess_for_tts(text: str) -> str:
     return text
 
 
+
+
 class RealtimeTTS:
     """
     WebSocket-based streaming TTS using ElevenLabs input streaming API.
 
-    Each call to synthesize() opens a fresh connection, sends BOS + text + EOS,
-    reads audio chunks until isFinal/connection close, then cleans up.
+    Supports **pre-warming**: call ``pre_connect()`` before the text is ready
+    (e.g. while the LLM is still generating) so the WebSocket handshake + BOS
+    happen concurrently with the LLM call.  ``synthesize()`` then reuses the
+    pre-opened connection, saving ~100-200 ms.
 
-    This avoids the 20s inactivity timeout issue and guarantees clean state
-    per utterance, while still being faster than HTTP TTS because the
-    WebSocket handshake (~150ms) is much cheaper than HTTP streaming setup (~500ms+).
+    If ``pre_connect()`` was not called, ``synthesize()`` opens a fresh
+    connection on the fly (backward-compatible behaviour).
     """
 
     def __init__(self):
@@ -176,28 +179,40 @@ class RealtimeTTS:
         }
         await self.ws.send(json.dumps(bos))
 
+    async def pre_connect(self) -> None:
+        """Pre-open the TTS WebSocket + send BOS.
+
+        Call this concurrently with the LLM invocation so the handshake
+        (~100-200 ms) is hidden behind the LLM processing time.
+        ``synthesize()`` will reuse this connection if it is still alive.
+        """
+        if self.ws is None:
+            try:
+                await self._open_stream()
+            except Exception as e:
+                logger.warning(f"TTS pre_connect failed (will retry in synthesize): {e}")
+                self.ws = None
+
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
         """
-        Open stream → send text + EOS → yield audio → connection closes.
+        Send full text + EOS → yield audio chunks.
 
-        ElevenLabs sends isFinal:true only after EOS is sent, so we send:
-          1. BOS (init)
-          2. Text + flush
-          3. EOS {"text": ""} — triggers isFinal:true
+        Uses ElevenLabs input-streaming: send the text with ``flush=true``
+        for immediate generation, then EOS.
 
-        Audio chunks arrive between steps 2 and 3's response.
+        If ``pre_connect()`` was called earlier, the WebSocket is already
+        open and BOS already sent — we skip the handshake.
         """
-        await self._open_stream()
+        # Reuse pre-opened connection or open fresh
+        if self.ws is None:
+            await self._open_stream()
 
         try:
             # Preprocess text for better pronunciation
             processed = _preprocess_for_tts(text)
 
-            # Send text with flush to force immediate generation
-            await self.ws.send(json.dumps({
-                "text": processed + " ",
-                "flush": True,
-            }))
+            # Send full text as a single chunk with flush for immediate generation
+            await self.ws.send(json.dumps({"text": processed + " ", "flush": True}))
 
             # EOS — tells ElevenLabs we're done, which triggers isFinal:true
             await self.ws.send(json.dumps({"text": ""}))
@@ -226,7 +241,7 @@ class RealtimeTTS:
                 self.ws = None
 
     async def connect(self):
-        """No-op for compatibility. Connection is opened per-synthesize."""
+        """No-op for compatibility. Connection is opened per-synthesize or pre_connect."""
         pass
 
     async def close(self):

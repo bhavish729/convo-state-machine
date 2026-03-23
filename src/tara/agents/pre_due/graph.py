@@ -1,3 +1,9 @@
+"""Pre-due agent graph — friendly reminder for 0-30 DPD accounts.
+
+Simpler graph than NPA: no present_options, no validate_commitment.
+Uses confirm_payment_date instead (full EMI only, no negotiation).
+"""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -5,24 +11,25 @@ from typing import Literal
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from tara.nodes.central_intelligence import central_intelligence
+from tara.agents.pre_due.nodes import confirm_payment_date
+from tara.agents.pre_due.prompts import build_pre_due_prompt
+from tara.nodes.central_intelligence import make_central_intelligence
 from tara.nodes.end_call import end_call
 from tara.nodes.escalate import escalate
 from tara.nodes.handle_objection import handle_objection
 from tara.nodes.identify_borrower import identify_borrower
 from tara.nodes.load_context import load_context
-from tara.nodes.present_options import present_options
 from tara.nodes.state_purpose import state_purpose
-from tara.nodes.validate_commitment import validate_commitment
 from tara.state.schema import TaraState
 
-# Valid action node names
+# Pre-due CI node wired to the warm reminder prompt
+pre_due_central_intelligence = make_central_intelligence(build_pre_due_prompt)
+
 ACTION_NODES = {
     "identify_borrower",
     "state_purpose",
     "handle_objection",
-    "present_options",
-    "validate_commitment",
+    "confirm_payment_date",
     "escalate",
 }
 
@@ -33,60 +40,53 @@ def route_from_ci(
     "identify_borrower",
     "state_purpose",
     "handle_objection",
-    "present_options",
-    "validate_commitment",
+    "confirm_payment_date",
     "escalate",
     "end_call",
 ]:
-    """
-    Routing function for conditional edges from central_intelligence.
-    Inspects the routing_decision set by the LLM and returns the next node.
-    """
+    """Routing function for pre-due graph."""
     decision = state.get("routing_decision", {})
     next_node = decision.get("next_node", "escalate")
 
-    # Terminal conditions — route through end_call node for state tracking
+    # Terminal conditions
     if next_node in ("end_agreement", "end_refusal", "end_callback"):
         return "end_call"
 
-    # Guard: force escalation if too many turns
-    if state.get("turn_count", 0) > 30:
+    # Guard: force end after 20 turns (pre-due has shorter patience)
+    if state.get("turn_count", 0) > 20:
         return "escalate"
+
+    # Map NPA node names to pre-due equivalents
+    # If LLM tries to route to validate_commitment or present_options,
+    # redirect to confirm_payment_date
+    if next_node in ("validate_commitment", "present_options"):
+        return "confirm_payment_date"
 
     if next_node in ACTION_NODES:
         return next_node
 
-    # Fallback to escalation for unknown routes
     return "escalate"
 
 
-def build_graph() -> StateGraph:
-    """
-    Construct and compile the Tara conversation graph.
-
-    Flow:
-        START -> load_context -> central_intelligence
-        central_intelligence --(conditional)--> action nodes | END
-        each action node -> END  (completes the turn; next user input re-enters via checkpoint)
-    """
+def build_pre_due_graph() -> StateGraph:
+    """Construct the pre-due friendly reminder graph."""
     builder = StateGraph(TaraState)
 
-    # Add nodes
+    # Nodes
     builder.add_node("load_context", load_context)
-    builder.add_node("central_intelligence", central_intelligence)
+    builder.add_node("central_intelligence", pre_due_central_intelligence)
     builder.add_node("identify_borrower", identify_borrower)
     builder.add_node("state_purpose", state_purpose)
     builder.add_node("handle_objection", handle_objection)
-    builder.add_node("present_options", present_options)
-    builder.add_node("validate_commitment", validate_commitment)
+    builder.add_node("confirm_payment_date", confirm_payment_date)
     builder.add_node("escalate", escalate)
     builder.add_node("end_call", end_call)
 
-    # Entry edge
+    # Entry
     builder.add_edge(START, "load_context")
     builder.add_edge("load_context", "central_intelligence")
 
-    # Conditional edges from central_intelligence
+    # Conditional routing from CI
     builder.add_conditional_edges(
         "central_intelligence",
         route_from_ci,
@@ -94,30 +94,22 @@ def build_graph() -> StateGraph:
             "identify_borrower": "identify_borrower",
             "state_purpose": "state_purpose",
             "handle_objection": "handle_objection",
-            "present_options": "present_options",
-            "validate_commitment": "validate_commitment",
+            "confirm_payment_date": "confirm_payment_date",
             "escalate": "escalate",
             "end_call": "end_call",
         },
     )
 
-    # Action nodes complete the turn — return to user and wait for next input.
-    # CI already generated the response; the action just updates internal state.
-    # Next user message will re-enter at central_intelligence via the graph's
-    # checkpointed state.
+    # All action nodes → END
     for action_node in [
         "identify_borrower",
         "state_purpose",
         "handle_objection",
-        "present_options",
-        "validate_commitment",
+        "confirm_payment_date",
         "escalate",
         "end_call",
     ]:
         builder.add_edge(action_node, END)
 
-    # Compile with in-memory checkpointing
     memory = MemorySaver()
-    graph = builder.compile(checkpointer=memory)
-
-    return graph
+    return builder.compile(checkpointer=memory)

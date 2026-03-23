@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from tara.data.mock_borrowers import BORROWER_DB
+from tara.data.mock_history import NEGOTIATION_HISTORY_DB
 from tara.state.schema import (
     ConversationPhase,
     ObjectionType,
@@ -44,6 +45,29 @@ def load_context(state: dict) -> dict:
         "sentiment_history": [],
         "current_objection": ObjectionType.NONE,
         "objections_raised": [],
+        "tactical_memory": {
+            "consequences_used": [],
+            "tactics_used": [],
+            "borrower_occupation": "unknown",
+            "borrower_excuses": [],
+            "partial_amount_offered": 0,
+            "callback_attempts": 0,
+            "promises_broken": 0,
+        },
+        "negotiation_history": NEGOTIATION_HISTORY_DB.get(borrower_id, []),
+        "call_progress": {
+            "partial_amount_committed": 0,
+            "payment_mode_confirmed": "",
+            "payment_locked": False,
+            "remaining_amount": profile.get("debt_amount", 0),
+            "identity_challenged": False,
+            "identity_challenge_turn": 0,
+            "claimed_identity": "",
+            "objection_loop_count": 0,
+            "last_objection": "",
+            "unproductive_turns": 0,
+            "call_outcome": "",
+        },
         "is_terminal": False,
         "escalation_reason": "",
     }

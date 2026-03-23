@@ -7,11 +7,15 @@
 - `anthropic` → `ChatAnthropic`
 - `gemini` → `ChatGoogleGenerativeAI` (uses `max_output_tokens` instead of `max_tokens`)
 
-If `tools` are passed, they're bound via `.bind_tools()`. Currently 5 tools are bound but **the prompt never instructs the LLM to use them** — this is a known issue (wastes ~1000 tokens/turn).
+No tools are bound — all routing is handled via structured JSON in the prompt.
 
-## prompts.py — System Prompt Builder
+## prompts.py — Legacy NPA Prompt (Backward Compat)
 
-`build_central_intelligence_prompt(state)` constructs a ~14K char system prompt. This is the **single most important file** in the project — all Tara behavior is driven by this prompt.
+`build_central_intelligence_prompt(state)` constructs the original NPA system prompt. This file is kept for backward compatibility — the active prompts are now in `agents/*/prompts.py`.
+
+**Active prompt files**: `agents/pre_due/prompts.py`, `agents/bucket_x/prompts.py`, `agents/npa/prompts.py`
+
+Each agent has its own `build_*_prompt(state) → str` and `_get_aggression_level(sentiment, turn_count, dpd)` function. The prompt structure below applies to the NPA prompt and is the template for all agents:
 
 ### Prompt Structure
 
@@ -25,9 +29,13 @@ If `tools` are passed, they're bound via `.bind_tools()`. Currently 5 tools are 
 8. **Defaulter behavior patterns** — 8 patterns (stalling, false promises, lying, denial, etc.) with counter-moves
 9. **Field visit pressure** — strongest lever, used at aggression Level 3-4
 10. **Aggression scale** — 4 levels (WARM → FIRM → URGENT → FINAL WARNING)
-11. **Decision framework** — routing options and when to use each
-12. **Response format** — JSON schema with `next_node`, `reasoning`, `response_to_borrower`, `extracted_info`
-13. **Style rules** — max 25 words, phone-call speech, number format in Hindi
+11. **Tactical memory** — consequences/tactics already used (DO NOT REPEAT)
+12. **Call progress** — partial payments, identity challenges, objection loops (with ⚠️ warning banners)
+13. **Call termination rules** — 8 conditions for when to end the call
+14. **Identity reversal protocol** — RBI-compliant always-comply approach
+15. **Decision framework** — routing options and when to use each
+16. **Response format** — JSON schema with `next_node`, `reasoning`, `response_to_borrower`, `extracted_info`
+17. **Style rules** — max 25 words, phone-call speech, number format in Hindi
 
 ### Aggression System
 
@@ -36,7 +44,7 @@ If `tools` are passed, they're bound via `.bind_tools()`. Currently 5 tools are 
 - **Turn count** — patience wears thin after 5+ turns
 - **Sentiment** — negative sentiment escalates, cooperative de-escalates
 
-**Known bug**: `current_sentiment` is never updated from "neutral" in the current codebase, so aggression only responds to turn_count and DPD.
+Sentiment is extracted every turn from `extracted_info.detected_sentiment` in central_intelligence. Yes-Man override: if borrower has been "cooperative" for 3+ turns with no payment committed, aggression stays at Level 2+.
 
 ### Key Prompt Conventions
 

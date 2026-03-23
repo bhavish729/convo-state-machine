@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     elevenlabs_base_url: str = ""  # Auto-detected from API key if empty
 
     # Server
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
     debug: bool = True
 
