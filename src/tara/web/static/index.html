@@ -919,16 +919,7 @@ let sampleRate = 16000;
 let incomingAudioChunks = [];
 let currentAudio = null;
 
-// Streaming audio playback (MediaSource API)
-let mediaSource = null;
-let sourceBuffer = null;
-let audioQueue = [];       // chunks waiting to be appended to SourceBuffer
-let streamingAudio = null;
-let isStreamingPlayback = false;
-// MediaSource streaming disabled — causes race conditions where endOfStream
-// fires before audio data arrives. Blob playback is stable and the other
-// optimizations (eager STT, LLM cache, VAD tuning, TTS pre-warm) cut ~3s.
-const USE_STREAMING = false;
+
 
 // VAD (Voice Activity Detection)
 let vadState = 'IDLE'; // IDLE | WAITING | SPEAKING | TRAILING
@@ -936,7 +927,7 @@ let speechStartTime = 0;
 let silenceStartTime = 0;
 let vadInterval = null;
 const VAD_THRESHOLD = 0.012;
-const SILENCE_TIMEOUT = 800;    // Reduced from 1200ms — Hindi speech pauses < 800ms
+const SILENCE_TIMEOUT = 500;    // Reduced from 800ms — safe minimum for Hinglish speech
 const SPEECH_MIN_DURATION = 200; // Reduced from 300ms — faster detection of real speech
 
 // Latency tracking
@@ -1424,14 +1415,8 @@ function runVAD() {
 // ═══════════════════════════════════════════════════
 function handleWsMessage(event) {
     if (event.data instanceof ArrayBuffer) {
-        if (USE_STREAMING && isStreamingPlayback) {
-            // Streaming: queue chunk for immediate playback via MediaSource
-            audioQueue.push(new Uint8Array(event.data));
-            processAudioQueue();
-        } else {
-            // Fallback: accumulate for blob playback
-            incomingAudioChunks.push(event.data);
-        }
+        // Accumulate MP3 chunks for blob playback after audio_end
+        incomingAudioChunks.push(event.data);
         return;
     }
 
@@ -1460,11 +1445,6 @@ function handleWsMessage(event) {
             if (data.status === 'speaking') {
                 isTaraSpeaking = true;
                 setStatus('speaking', 'Tara is speaking...');
-                // Init streaming playback when TTS is about to start
-                if (USE_STREAMING) {
-                    console.log('[WS] Speaking status → init streaming playback');
-                    initStreamingPlayback();
-                }
             }
             else if (data.status === 'thinking') setStatus('thinking', 'Processing...');
             else if (data.status === 'listening') setStatus('listening', 'Listening...');
@@ -1475,16 +1455,11 @@ function handleWsMessage(event) {
             break;
 
         case 'audio_end':
-            console.log('[WS] audio_end → isStreamingPlayback=', isStreamingPlayback,
-                'audioQueue=', audioQueue.length, 'blobChunks=', incomingAudioChunks.length);
+            console.log('[WS] audio_end → blobChunks=', incomingAudioChunks.length);
             if (data.latency) Object.assign(latencyData, data.latency);
             if (turnStartTime) latencyData.total_ms = Math.round(performance.now() - turnStartTime);
             showLatency(latencyData);
-            if (isStreamingPlayback) {
-                finalizeStreamingPlayback();
-            } else {
-                playAudioChunks();
-            }
+            playAudioChunks();
             break;
 
         case 'state_update':
@@ -1535,148 +1510,8 @@ function handleWsMessage(event) {
 }
 
 // ═══════════════════════════════════════════════════
-//  Audio Playback — Streaming (MediaSource) + Fallback (Blob)
+//  Audio Playback — Blob-based (all chunks → single Audio)
 // ═══════════════════════════════════════════════════
-
-// ── Streaming playback via MediaSource API ──
-// Plays audio chunks as they arrive, eliminating the wait for all chunks.
-// Supported: Chrome, Safari. Falls back to blob on Firefox.
-
-let streamingFinalized = false;  // true after audio_end received
-let streamingSafetyTimer = null; // safety timeout to prevent stuck state
-
-function initStreamingPlayback() {
-    if (isStreamingPlayback) return; // already initialised
-    console.log('[AUDIO] initStreamingPlayback: USE_STREAMING =', USE_STREAMING);
-
-    streamingFinalized = false;
-    mediaSource = new MediaSource();
-    streamingAudio = new Audio();
-    const url = URL.createObjectURL(mediaSource);
-    streamingAudio.src = url;
-    currentAudio = streamingAudio; // for barge-in compatibility
-
-    mediaSource.addEventListener('sourceopen', () => {
-        console.log('[AUDIO] MediaSource sourceopen fired');
-        try {
-            sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
-            sourceBuffer.addEventListener('updateend', () => {
-                processAudioQueue();
-                // If finalized and queue empty, call endOfStream
-                if (streamingFinalized && audioQueue.length === 0 && !sourceBuffer.updating) {
-                    try {
-                        if (mediaSource.readyState === 'open') {
-                            console.log('[AUDIO] All chunks appended, calling endOfStream');
-                            mediaSource.endOfStream();
-                        }
-                    } catch (e) { console.debug('[AUDIO] endOfStream error:', e); }
-                }
-            });
-            console.log('[AUDIO] SourceBuffer created, flushing', audioQueue.length, 'queued chunks');
-            processAudioQueue(); // flush anything queued before sourceopen
-        } catch (e) {
-            console.warn('[AUDIO] addSourceBuffer failed, falling back:', e);
-            cleanupStreamingPlayback();
-        }
-    });
-
-    streamingAudio.addEventListener('ended', () => {
-        console.log('[AUDIO] Streaming audio ended event');
-        if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
-        cleanupStreamingPlayback();
-        autoStartListening();
-    });
-
-    streamingAudio.addEventListener('error', (e) => {
-        console.warn('[AUDIO] Streaming audio error:', streamingAudio.error);
-        if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
-        cleanupStreamingPlayback();
-        // Fall back: play whatever we accumulated
-        playAudioChunks();
-    });
-
-    streamingAudio.play().then(() => {
-        console.log('[AUDIO] Streaming play() started OK');
-    }).catch(e => {
-        console.warn('[AUDIO] Streaming play() rejected:', e);
-        cleanupStreamingPlayback();
-    });
-
-    isStreamingPlayback = true;
-
-    // Start barge-in monitoring
-    if (micAvailable && !isTerminal) startBargeInMonitor();
-}
-
-function processAudioQueue() {
-    if (!sourceBuffer || sourceBuffer.updating || audioQueue.length === 0) return;
-    try {
-        const chunk = audioQueue.shift();
-        sourceBuffer.appendBuffer(chunk);
-    } catch (e) {
-        console.warn('[AUDIO] appendBuffer error:', e);
-    }
-}
-
-function finalizeStreamingPlayback() {
-    console.log('[AUDIO] finalizeStreamingPlayback called, isStreamingPlayback=', isStreamingPlayback,
-        'mediaSource=', !!mediaSource, 'sourceBuffer=', !!sourceBuffer,
-        'queueLen=', audioQueue.length);
-
-    if (!isStreamingPlayback || !mediaSource) {
-        console.log('[AUDIO] Not streaming, falling back to blob playback');
-        playAudioChunks();
-        return;
-    }
-
-    streamingFinalized = true;
-
-    // If sourceBuffer exists, queue is empty, and not updating — end now
-    if (sourceBuffer && audioQueue.length === 0 && !sourceBuffer.updating) {
-        try {
-            if (mediaSource.readyState === 'open') {
-                console.log('[AUDIO] Immediate endOfStream (queue already empty)');
-                mediaSource.endOfStream();
-            }
-        } catch (e) { console.debug('[AUDIO] endOfStream:', e); }
-    } else if (!sourceBuffer) {
-        // sourceopen never fired — no SourceBuffer, audio can't play
-        console.warn('[AUDIO] No sourceBuffer when finalizing — sourceopen never fired, cleaning up');
-        cleanupStreamingPlayback();
-        autoStartListening();
-        return;
-    }
-    // else: updateend handler will call endOfStream when queue drains
-
-    // Safety timeout: if 'ended' event doesn't fire within 10s, force cleanup
-    streamingSafetyTimer = setTimeout(() => {
-        console.warn('[AUDIO] Safety timeout — streaming ended event never fired, forcing cleanup');
-        streamingSafetyTimer = null;
-        cleanupStreamingPlayback();
-        autoStartListening();
-    }, 10000);
-}
-
-function cleanupStreamingPlayback() {
-    console.log('[AUDIO] cleanupStreamingPlayback');
-    if (streamingSafetyTimer) { clearTimeout(streamingSafetyTimer); streamingSafetyTimer = null; }
-    if (streamingAudio) {
-        URL.revokeObjectURL(streamingAudio.src);
-        // Don't pause if ended naturally
-        if (!streamingAudio.ended) streamingAudio.pause();
-        streamingAudio = null;
-    }
-    currentAudio = null;
-    mediaSource = null;
-    sourceBuffer = null;
-    audioQueue = [];
-    isStreamingPlayback = false;
-    streamingFinalized = false;
-    isTaraSpeaking = false;
-    stopBargeInMonitor();
-}
-
-// ── Fallback: blob-based playback (Firefox, error recovery) ──
 
 function playAudioChunks() {
     console.log('[AUDIO] playAudioChunks: chunks =', incomingAudioChunks.length);
@@ -1705,7 +1540,6 @@ function playAudioChunks() {
         autoStartListening();
     });
 
-    // Start barge-in: monitor mic for user speech during Tara's playback
     if (micAvailable && !isTerminal) startBargeInMonitor();
 }
 
@@ -1732,17 +1566,14 @@ function startBargeInMonitor() {
         if (rms > BARGE_IN_THRESHOLD) {
             console.log('[BARGE-IN] User speech detected, interrupting Tara');
             stopBargeInMonitor();
-            // Clean up streaming playback if active
-            if (isStreamingPlayback) {
-                cleanupStreamingPlayback();
-            } else if (currentAudio) {
+            // Stop current audio playback
+            if (currentAudio) {
+                if (currentAudio.src) URL.revokeObjectURL(currentAudio.src);
                 currentAudio.pause();
-                URL.revokeObjectURL(currentAudio.src);
                 currentAudio = null;
             }
             isTaraSpeaking = false;
             incomingAudioChunks = [];
-            audioQueue = [];
             // Notify server to cancel TTS immediately
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'barge_in' }));
@@ -1766,15 +1597,14 @@ function autoStartListening() {
         console.log('[MIC] autoStartListening skipped: terminal=', isTerminal, 'mic=', micAvailable);
         return;
     }
-    setTimeout(() => {
-        if (!isTerminal && !isRecording && !isTaraSpeaking) {
-            console.log('[MIC] autoStartListening → startListening()');
-            startListening();
-        } else {
-            console.log('[MIC] autoStartListening timeout skipped: terminal=', isTerminal,
-                'recording=', isRecording, 'speaking=', isTaraSpeaking);
-        }
-    }, 150);  // Reduced from 400ms — faster mic reopen after Tara speaks
+    // No delay — AudioContext is already initialized, start listening immediately
+    if (!isTerminal && !isRecording && !isTaraSpeaking) {
+        console.log('[MIC] autoStartListening → startListening()');
+        startListening();
+    } else {
+        console.log('[MIC] autoStartListening skipped: terminal=', isTerminal,
+            'recording=', isRecording, 'speaking=', isTaraSpeaking);
+    }
 }
 
 // ═══════════════════════════════════════════════════
